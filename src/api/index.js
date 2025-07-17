@@ -1,6 +1,19 @@
 // src/api/index.js
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL; // Use your actual backend URL for prod
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+// Helper to get token from localStorage
+const getToken = () => localStorage.getItem('token');
+
+// Helper to wrap fetch with Authorization header if token exists
+const authFetch = (url, options = {}) => {
+    const token = getToken();
+    const headers = {
+        ...(options.headers || {}),
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    };
+    return fetch(url, { ...options, headers });
+};
 
 export const fetchAllCards = async () => {
     try {
@@ -11,32 +24,20 @@ export const fetchAllCards = async () => {
         return await response.json();
     } catch (error) {
         console.error("Failed to fetch cards:", error);
-        // Return an empty array or handle the error as needed
         return [];
     }
 };
 
 export const fetchMyCollection = async () => {
     try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(
-            `${import.meta.env.VITE_API_BASE_URL}/users/collection`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            }
-        );
-
+        const response = await authFetch(`${API_BASE_URL}/users/collection`);
         if (response.status === 401) {
             console.error("Unauthorized: Please log in.");
             return [];
         }
-
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
-
         return await response.json();
     } catch (error) {
         console.error("Failed to fetch user collection:", error);
@@ -44,7 +45,38 @@ export const fetchMyCollection = async () => {
     }
 };
 
-// We create a helper function to get the image URL directly
 export const getCardImageUrl = (cardId) => {
     return `${API_BASE_URL}/cards/image/${cardId}`;
+};
+
+export const fetchUserDecks = async () => {
+    return authFetch(`${API_BASE_URL}/decks`)
+        .then(res => res.json());
+};
+
+export const fetchDeckById = async (deckId) => {
+    return authFetch(`${API_BASE_URL}/decks/${deckId}`)
+        .then(res => res.json());
+};
+
+export const createNewDeck = async (deckName = 'New Deck') => {
+    return authFetch(`${API_BASE_URL}/decks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: deckName })
+    }).then(res => res.json());
+};
+
+export const updateDeck = async (deckId, deckData) => {
+    return authFetch(`${API_BASE_URL}/decks/${deckId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(deckData)
+    }).then(res => res.json());
+};
+
+export const deleteDeckById = async (deckId) => {
+    return authFetch(`${API_BASE_URL}/decks/${deckId}`, {
+        method: 'DELETE'
+    }).then(res => res.json());
 };

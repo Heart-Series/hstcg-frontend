@@ -1,57 +1,88 @@
-// src/components/Card.jsx
 import React from 'react';
 import { getCardImageUrl } from '../api';
 
-// Simple styling, you can move this to a CSS file later
-const cardStyle = {
-    border: '1px solid #ccc',
-    borderRadius: '8px',
-    padding: '10px',
-    margin: '10px',
-    width: '200px',
-    textAlign: 'center',
-    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-    position: 'relative',
-};
-
-const quantityBadgeStyle = {
-    position: 'absolute',
-    top: '5px',
-    right: '5px',
-    background: 'rgba(0, 0, 0, 0.7)',
-    color: 'white',
-    borderRadius: '10px',
-    padding: '2px 8px',
-    fontSize: '0.9em',
-    fontWeight: 'bold',
-};
-
-const imgStyle = {
-    width: '100%',
-    height: 'auto',
-    borderRadius: '4px',
-};
-
-const Card = ({ cardData, quantity }) => {
-    // cardData is an object like { id: 'home', name: 'Home9634', ... }
+const Card = ({
+    cardData,
+    quantity,
+    showTitle = false,
+    showType = false,
+    showBanner = false,
+}) => {
     if (!cardData) return null;
 
-    return (
-        <div style={cardStyle}>
-            {quantity && (
-                <div style={quantityBadgeStyle}>
-                    x{quantity}
+    const isPlayerCard = cardData.cardType === 'Player';
+    const rank = cardData.rank || 1;
+    const displayQuantity = quantity || cardData.quantity;
+
+    // A single, smarter banner component for precise placement
+    const OverlapBanner = () => {
+        if (!showBanner || !displayQuantity) {
+            return null;
+        }
+
+        // Common classes for the banner container
+        const bannerBaseClasses = "absolute bg-black text-white font-bold rounded-e-md shadow-lg flex select-none z-10";
+
+        if (isPlayerCard) {
+            // Render the taller banner for Player cards
+            return (
+                <div
+                    className={`${bannerBaseClasses} flex-col justify-around items-center`}
+                    style={{
+                        // Position relative to the parent card container
+                        top: '0px',      // 8px from the top
+                        right: '-26px',  // 16px outside the right edge
+                        width: '33px',   // Fixed width
+                        height: '60px',  // Taller height for two lines
+                    }}
+                >
+                    <span className="text-base">R{rank}</span>
+                    <span className="text-base">x{displayQuantity}</span>
                 </div>
-            )}
-            <h4>{cardData.name}</h4>
-            <img
-                src={getCardImageUrl(cardData.id)}
-                alt={cardData.name}
-                style={imgStyle}
-                // Good practice to add lazy loading for performance
-                loading="lazy"
-            />
-            <p>Type: {cardData.cardType}</p>
+            );
+        } else {
+            // Render the shorter, centered banner for Support cards
+            return (
+                <div
+                    className={`${bannerBaseClasses} justify-center items-center`}
+                    style={{
+                        top: '0px',
+                        right: '-26px',
+                        width: '33px',
+                        height: '45px', // Shorter height for one line
+                    }}
+                >
+                    <span className="text-lg">x{displayQuantity}</span>
+                </div>
+            );
+        }
+    };
+
+    return (
+        // The main container MUST be relative for the absolute banner to position correctly.
+        <div className="relative w-full">
+            {/* The actual card content */}
+            <div className="w-full h-full flex flex-col items-center">
+                {showTitle && (
+                    <h4 className="text-base font-semibold text-gray-800 mb-2 truncate w-full">{cardData.name}</h4>
+                )}
+                
+                <div className="w-full aspect-[3/4] bg-gray-200 rounded-lg overflow-hidden">
+                    <img
+                        src={getCardImageUrl(cardData.id)}
+                        alt={cardData.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                    />
+                </div>
+
+                {showType && (
+                    <p className="text-sm text-gray-600 mt-1">Type: {cardData.cardType}</p>
+                )}
+            </div>
+
+            {/* Render the overlapping banner */}
+            <OverlapBanner />
         </div>
     );
 };

@@ -5,42 +5,27 @@ import { useAuth } from '../hooks/useAuth';
 import { fetchMyCollection } from '../api';
 import Card from '../components/Card'; // Our enhanced Card component
 
-const gridStyle = {
-    display: 'flex',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-};
-
-const MyCollection = () => {
+const CardCollection = () => {
     const [collection, setCollection] = useState([]);
     const [loading, setLoading] = useState(true);
-    const { user, loading: authLoading } = useAuth(); // Get user state from our hook
+    const { user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
-        // If the auth hook is still loading, wait.
-        if (authLoading) {
-            return;
-        }
-
-        // If there's no user after checking, redirect them to the home page.
+        if (authLoading) return;
         if (!user) {
             navigate('/');
             return;
         }
-
-        // If we have a user, fetch their collection.
         const getCollection = async () => {
             setLoading(true);
             const user_collection = await fetchMyCollection();
             setCollection(user_collection);
             setLoading(false);
         };
-
         getCollection();
-    }, [user, authLoading, navigate]); // Rerun this effect if user or authLoading state changes
+    }, [user, authLoading, navigate]);
 
-    // Show a loading message while we're fetching auth status or card data
     if (authLoading || loading) {
         return <div>Loading your collection...</div>;
     }
@@ -51,10 +36,14 @@ const MyCollection = () => {
             {collection.length > 0 ? (
                 <>
                     <p>You own {collection.length} unique cards.</p>
-                    <div style={gridStyle}>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-10 p-4">
                         {collection.map(card => (
-                            // Pass the card data AND the quantity to our Card component
-                            <Card key={card.id} cardData={card} quantity={card.quantity} />
+                            <div
+                                key={card.id}
+                                className="w-full max-w-[220px] mx-auto"
+                            >
+                                <Card cardData={card} showBanner />
+                            </div>
                         ))}
                     </div>
                 </>
@@ -65,4 +54,4 @@ const MyCollection = () => {
     );
 };
 
-export default MyCollection;
+export default CardCollection;

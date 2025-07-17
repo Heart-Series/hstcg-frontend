@@ -7,6 +7,8 @@ import { useAuth } from './hooks/useAuth';
 // Import your page components
 import CardLibrary from './pages/CardLibrary';
 import CardCollection from './pages/CardCollection'
+import DeckLibrary from './pages/DeckLibrary';
+import DeckBuilder from './pages/DeckBuilder';
 
 // A simple component for the home page
 const HomePage = () => (
@@ -59,8 +61,9 @@ function App() {
         <HashRouter>
             <nav style={navStyle}>
                 <Link to="/" style={linkStyle}>Home</Link>
-                <Link to="/library" style={linkStyle}>Card Library</Link>
+                {/* <Link to="/library" style={linkStyle}>Card Library</Link> */}
                 {user && <Link to="/collection" style={linkStyle}>My Collection</Link>}
+                {user && <Link to="/decks" style={linkStyle}>Decks</Link>}
 
                 <div style={{ marginLeft: 'auto' }}>
                     {loading ? <span style={linkStyle}>Loading...</span> :
@@ -78,8 +81,10 @@ function App() {
             <main style={{ padding: '1rem' }}>
                 <Routes>
                     <Route path="/" element={<HomePage />} />
-                    <Route path="/library" element={<CardLibrary />} />
+                    {/* <Route path="/library" element={<CardLibrary />} /> */}
                     <Route path="/collection" element={<CardCollection />} />
+                    <Route path="/decks" element={<DeckLibrary />} />
+                    <Route path="/decks/:deckId" element={<DeckBuilder />} />
                     {/* You will add more routes here for other pages */}
                     {/* e.g., <Route path="/collection" element={<MyCollection />} /> */}
                 </Routes>
