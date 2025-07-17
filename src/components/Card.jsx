@@ -11,6 +11,19 @@ const cardStyle = {
     width: '200px',
     textAlign: 'center',
     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+    position: 'relative',
+};
+
+const quantityBadgeStyle = {
+    position: 'absolute',
+    top: '5px',
+    right: '5px',
+    background: 'rgba(0, 0, 0, 0.7)',
+    color: 'white',
+    borderRadius: '10px',
+    padding: '2px 8px',
+    fontSize: '0.9em',
+    fontWeight: 'bold',
 };
 
 const imgStyle = {
@@ -19,15 +32,20 @@ const imgStyle = {
     borderRadius: '4px',
 };
 
-const Card = ({ cardData }) => {
-    // cardData is an object like { id: 'fireball', name: 'Fireball', ... }
+const Card = ({ cardData, quantity }) => {
+    // cardData is an object like { id: 'home', name: 'Home9634', ... }
     if (!cardData) return null;
 
     return (
         <div style={cardStyle}>
+            {quantity && (
+                <div style={quantityBadgeStyle}>
+                    x{quantity}
+                </div>
+            )}
             <h4>{cardData.name}</h4>
-            <img 
-                src={getCardImageUrl(cardData.id)} 
+            <img
+                src={getCardImageUrl(cardData.id)}
                 alt={cardData.name}
                 style={imgStyle}
                 // Good practice to add lazy loading for performance
