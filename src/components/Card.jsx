@@ -67,7 +67,8 @@ const Card = ({
                     <h4 className="text-base font-semibold text-gray-800 mb-2 truncate w-full">{cardData.name}</h4>
                 )}
                 
-                <div className="w-full aspect-[3/4] bg-gray-200 rounded-lg overflow-hidden">
+                {/* bg-gray-200 */}
+                <div className="w-full aspect-[3/4]  rounded-lg overflow-hidden">
                     <img
                         src={getCardImageUrl(cardData.id)}
                         alt={cardData.name}
