@@ -9,6 +9,9 @@ import CardLibrary from './pages/CardLibrary';
 import CardCollection from './pages/CardCollection'
 import DeckLibrary from './pages/DeckLibrary';
 import DeckBuilder from './pages/DeckBuilder';
+import LobbyListPage from './pages/LobbyListPage';
+import LobbyPage from './pages/LobbyPage';      
+import GamePage from './pages/GamePage';        
 
 // A simple component for the home page
 const HomePage = () => (
@@ -64,6 +67,7 @@ function App() {
                 {/* <Link to="/library" style={linkStyle}>Card Library</Link> */}
                 {user && <Link to="/collection" style={linkStyle}>My Collection</Link>}
                 {user && <Link to="/decks" style={linkStyle}>Decks</Link>}
+                  {user && <Link to="/lobbies" style={linkStyle}>Lobbies</Link>} {/* <-- NEW LINK */}
 
                 <div style={{ marginLeft: 'auto' }}>
                     {loading ? <span style={linkStyle}>Loading...</span> :
@@ -85,6 +89,9 @@ function App() {
                     <Route path="/collection" element={<CardCollection />} />
                     <Route path="/decks" element={<DeckLibrary />} />
                     <Route path="/decks/:deckId" element={<DeckBuilder />} />
+                    <Route path="/lobbies" element={<LobbyListPage />} />
+                    <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
+                    <Route path="/game/:gameId" element={<GamePage />} />
                     {/* You will add more routes here for other pages */}
                     {/* e.g., <Route path="/collection" element={<MyCollection />} /> */}
                 </Routes>

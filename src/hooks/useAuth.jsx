@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
             });
     }, []);
 
-    const value = { user, loading };
+    const value = { user, loading, token: localStorage.getItem('token') };
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
