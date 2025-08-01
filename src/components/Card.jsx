@@ -7,13 +7,15 @@ const Card = ({
     showTitle = false,
     showType = false,
     showBanner = false,
+    hp 
 }) => {
     if (!cardData) return null;
 
     const isPlayerCard = cardData.cardType === 'Player';
     const rank = cardData.rank || 1;
     const displayQuantity = quantity || cardData.quantity;
-
+    const displayHp = hp || cardData.hp;
+    
     // A single, smarter banner component for precise placement
     const OverlapBanner = () => {
         if (!showBanner || !displayQuantity) {
@@ -70,7 +72,7 @@ const Card = ({
                 {/* bg-gray-200 */}
                 <div className="w-full aspect-[3/4]  rounded-lg overflow-hidden">
                     <img
-                        src={getCardImageUrl(cardData.id)}
+                        src={getCardImageUrl(cardData.id, displayHp)}
                         alt={cardData.name}
                         className="w-full h-full object-cover"
                         loading="lazy"

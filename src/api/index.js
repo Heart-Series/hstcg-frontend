@@ -45,8 +45,8 @@ export const fetchMyCollection = async () => {
     }
 };
 
-export const getCardImageUrl = (cardId) => {
-    return `${API_BASE_URL}/cards/image/${cardId}`;
+export const getCardImageUrl = (cardId, hp) => {
+    return `${API_BASE_URL}/cards/image/${cardId}?${hp ? `hp=${hp}` : ''}`;
 };
 
 export const fetchUserDecks = async () => {

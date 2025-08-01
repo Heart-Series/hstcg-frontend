@@ -1,12 +1,46 @@
 // src/components/game/PlayerHand.jsx
 import React, { useState } from 'react';
+import { useDraggable } from '@dnd-kit/core';
 import Card from '../Card'; // Your main card component
+import { useGameUI } from '../../context/GameUIContext';
 
-const PlayerHand = ({ cards, isMyTurn, onPlayCard, isOpen, setIsOpen }) => {
+const DraggableCard = ({ card, cardHandIndex, canPerformAction }) => {
+    // console.log(`Can Perform Action: ${canPerformAction}`)
+    const { attributes, listeners, setNodeRef, transform } = useDraggable({
+        id: `hand-card-${cardHandIndex}`, // Unique ID for this draggable item
+        disabled: !canPerformAction,
+        data: { // We can attach any data we want to the drag event
+            cardData: card,
+            cardHandIndex: cardHandIndex,
+            source: 'hand',
+        },
+    });
+
+    const style = transform ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: 100, // Ensure the dragged card is on top
+    } : undefined;
+
+    return (
+         <div 
+            ref={setNodeRef} 
+            style={style} 
+            {...listeners} 
+            {...attributes} 
+            className={`flex-shrink-0 ${transform ? 'w-32' : 'w-40'}`}
+        >
+            <Card cardData={card} />
+        </div>
+    );
+};
+
+const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction }) => {
+    // Use useGameUI for isOpen and setIsOpen
+    const { isHandOpen, setIsHandOpen } = useGameUI();
 
     // This is the "abstracted trigger" you mentioned.
     // For now, it's a simple button, but it could be triggered by other events.
-    const toggleHand = () => setIsOpen(!isOpen);
+    const toggleHand = () => setIsHandOpen(!isHandOpen);
 
     return (
         <>
@@ -21,35 +55,26 @@ const PlayerHand = ({ cards, isMyTurn, onPlayCard, isOpen, setIsOpen }) => {
                         animation: isMyTurn ? 'pulse 2s infinite' : 'none'
                     }}
                 >
-                    {isOpen ? 'Close Hand' : `View Hand (${cards.length})`}
+                    {isHandOpen ? 'Close Hand' : `View Hand (${cards.length})`}
                 </button>
             </div>
 
             {/* --- The Hand Drawer --- */}
             <div
-                className={`fixed bottom-0 left-0 w-full bg-gray-900 bg-opacity-80 backdrop-blur-sm p-4 border-t-2 border-blue-500 shadow-2xl z-20 transition-transform duration-500 ease-in-out ${
-                    isOpen ? 'translate-y-0' : 'translate-y-full'
-                }`}
+                className={`fixed bottom-0 left-0 w-full bg-gray-900 bg-opacity-80 backdrop-blur-sm p-4 border-t-2 border-blue-500 shadow-2xl z-20 transition-transform duration-500 ease-in-out ${isHandOpen ? 'translate-y-0' : 'translate-y-full'
+                    }`}
             >
                 {/* Horizontal Scrolling Container */}
                 <div className="flex flex-nowrap overflow-x-auto gap-4 pb-4">
                     {cards.length > 0 ? (
                         cards.map((card, index) => (
-                            <div
+                              <DraggableCard
                                 key={`${card.id}-${index}`}
-                                className="flex-shrink-0 w-40 cursor-pointer"
-                                // In the future, this is where you'd initiate a drag event.
-                                // For now, we can have it call onPlayCard directly for simple actions.
-                                onClick={() => {
-                                    if (isMyTurn) {
-                                        // Example: a simple item card play
-                                        onPlayCard(card.id, null); // target is null for now
-                                        toggleHand(); // Close hand after playing
-                                    }
-                                }}
-                            >
-                                <Card cardData={card} />
-                            </div>
+                                // Pass `card`, not `cardData`
+                                card={card} 
+                                cardHandIndex={index}
+                                canPerformAction={canPerformAction}
+                            />
                         ))
                     ) : (
                         <div className="text-center w-full text-gray-400 p-8">Your hand is empty.</div>
