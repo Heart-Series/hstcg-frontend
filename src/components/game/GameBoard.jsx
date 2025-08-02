@@ -36,7 +36,7 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
 
             {/* Opponent's Area (rendered in reverse) */}
             <div className="flex-1 flex items-end justify-center w-full">
-                <PlayerArea playerState={opponentState} isOpponent={true} actions={actions} gameState={gameState} activeDragData={activeDragData} selectedCard={selectedCard} onCardClick={onCardClick} onActionClick={onActionClick} targeting={targeting} />
+                <PlayerArea playerState={opponentState} isOpponent={true} actions={actions} gameState={gameState} activeDragData={activeDragData}  />
             </div>
 
             {/* A simple divider for the middle of the board */}
@@ -44,7 +44,7 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
 
             {/* My Area */}
             <div className="flex-1 flex items-start justify-center w-full">
-                <PlayerArea playerState={myPlayerState} isOpponent={false} actions={actions} gameState={gameState} activeDragData={activeDragData} selectedCard={selectedCard} onCardClick={onCardClick} onActionClick={onActionClick} targeting={targeting} />
+                <PlayerArea playerState={myPlayerState} isOpponent={false} actions={actions} gameState={gameState} activeDragData={activeDragData}  />
             </div>
         </div>
     );

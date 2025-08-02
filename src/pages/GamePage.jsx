@@ -60,35 +60,41 @@ const GamePageContent = ({ initialGameState }) => {
         const dropZoneId = over.id;
 
         // --- Handle dropping based on the game phase and drop zone ID ---
-        if (gameState.phase === 'setup' && dropZoneId === 'my-active-slot') {
+        if (gameState.phase === 'setup' && dropZoneId === 'my-active') {
             actions.setInitialActive(cardHandIndex);
         }
 
-        if (gameState.phase === 'main_phase' && typeof dropZoneId === 'string' && dropZoneId.startsWith('my-bench-slot-')) {
-            const benchIndex = parseInt(dropZoneId.split('-')[3]);
+        if (gameState.phase === 'main_phase' && typeof dropZoneId === 'string' && dropZoneId.startsWith('my-bench-')) {
+            const benchIndex = parseInt(dropZoneId.split('-')[2]);
             actions.playCardToBench(cardHandIndex, benchIndex);
         }
 
-        if (gameState.phase === 'main_phase' && dropZoneId === 'my-support-slot') {
+        if (gameState.phase === 'main_phase' && dropZoneId === 'my-support') {
             actions.playSupportCard(cardHandIndex);
             return; // Stop processing
         }
 
-        if (active.data.current?.cardData?.cardType === 'Item' && typeof dropZoneId === 'string' && dropZoneId.includes('-card')) {
-            const parts = dropZoneId.split('-'); // ['opponent', 'bench', 'card', '2']
-            const targetOwner = parts[0];
-            const targetZone = parts[1];
-            const targetIndex = parts.length > 3 ? parseInt(parts[3]) : null;
-
-            // Construct the target object for the backend
-            const target = {
-                playerId: targetOwner === 'my' ? myPlayerState.socketId : opponentState.socketId,
-                zone: targetZone,
-                index: targetIndex,
-            };
-
-            actions.playItemCard(cardHandIndex, target);
-            return;
+        // --- Use validTargets for Item cards ---
+        if (active.data.current?.cardData?.cardType === 'Item' && typeof dropZoneId === 'string') {
+            const draggedCard = active.data.current.cardData;
+            if (Array.isArray(draggedCard.validTargets)) {
+                // Convert dropZoneId to target string
+                const parts = dropZoneId.split('-');
+                const owner = parts[0];
+                const zone = parts[1];
+                const idx = parts[2];
+                const targetString = idx !== undefined ? `${owner}_${zone}_${idx}` : `${owner}_${zone}`;
+                if (draggedCard.validTargets.includes(targetString)) {
+                    // Construct the target object for the backend
+                    const target = {
+                        playerId: owner === 'my' ? myPlayerState.socketId : opponentState.socketId,
+                        zone: zone,
+                        index: idx !== undefined ? parseInt(idx) : null,
+                    };
+                    actions.playItemCard(cardHandIndex, target);
+                    return;
+                }
+            }
         }
     };
 
@@ -99,7 +105,23 @@ const GamePageContent = ({ initialGameState }) => {
 
     // Check for a winner to show the game over screen
     if (gameState.winner) {
-        return <GameOverScreen winner={gameState.winner} />;
+        return (
+            <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white">
+                <h1 className="text-4xl font-bold mb-4">Game Over!</h1>
+                <h2 className="text-2xl mb-2">{gameState.players[gameState.winner]?.username || 'Unknown'} wins!</h2>
+                <div className="mt-4 p-4 bg-gray-800 rounded-lg shadow-lg max-w-xl w-full">
+                    <h3 className="text-lg font-semibold mb-2">Game Log:</h3>
+                    <ul className="max-h-64 overflow-y-auto text-sm">
+                        {gameState.log.map((entry, idx) => (
+                            <li key={idx} className="mb-1">{entry}</li>
+                        ))}
+                    </ul>
+                </div>
+                <button className="mt-8 px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300" onClick={() => window.location.href = '/lobbies'}>
+                    Return to Lobby
+                </button>
+            </div>
+        );
     }
 
     return (

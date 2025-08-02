@@ -73,7 +73,7 @@ export const useGameEngine = (initialGameState) => {
         }
     }, [socket]);
 
-     const playItemCard = useCallback((cardHandIndex, target) => {
+    const playItemCard = useCallback((cardHandIndex, target) => {
         if (socket) {
             socket.emit('game:playItemCard', { cardHandIndex, target });
         }
@@ -91,6 +91,13 @@ export const useGameEngine = (initialGameState) => {
         }
     }, [socket]);
 
+
+    const activateBenchCard = useCallback((benchIndex) => {
+        if (socket) {
+            socket.emit('game:activateBenchCard', { benchIndex });
+        }
+    }, [socket]);
+
     // ... other actions like attack, useAbility, etc. ...
 
     // --- Derived State ---
@@ -99,9 +106,9 @@ export const useGameEngine = (initialGameState) => {
     const opponentState = Object.entries(gameState?.players || {})
         .find(([id]) => id !== socket?.id)?.[1];
     const isMyTurn = gameState?.phase === 'main_phase' && gameState?.activePlayerId === socket?.id;
-    
+
     // A new variable to determine if the player can interact with their hand.
-    const canPerformAction = 
+    const canPerformAction =
         (gameState?.phase === 'setup' && !myPlayerState?.hasChosenActive) || isMyTurn;
 
     return {
@@ -120,6 +127,7 @@ export const useGameEngine = (initialGameState) => {
             playItemCard,
             performAttack,
             retreatActiveCard,
+            activateBenchCard,
         },
     };
 };

@@ -23,7 +23,7 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
             const parts = droppableId.split('-');
             const targetOwner = parts[0];
             const targetZone = parts[1];
-            const targetIndex = parts.length > 3 ? parseInt(parts[3]) : null;
+            const targetIndex = Number(parts[2])
             const target = {
                 playerId: targetOwner === 'my' ? myPlayerState.socketId : opponentState.socketId,
                 zone: targetZone,
@@ -41,6 +41,8 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
                 setTargeting({ isTargeting: false, action: null, sourceCardId: null });
                 setSelectedCard(null);
             }
+
+            return actions;
         } else {
             setSelectedCard(current => (current === droppableId ? null : droppableId));
         }
@@ -48,7 +50,10 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
 
     // Context-aware action click handler
     const onActionClick = (action, sourceCardId) => {
-        console.log(action.requiresTarget)
+        // console.log(action.requiresTarget)
+        // console.log(sourceCardId)
+        const index = sourceCardId.split("-")[2]
+        // console.log(index)
         if (action.requiresTarget) {
             setTargeting({
                 isTargeting: true,
@@ -62,6 +67,8 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
                 // Optionally, show error or feedback
             } else if (action.type === 'basic_attack' || action.type === 'special_attack') {
                 // For attacks, should always require target
+            } else if (action.type === 'activate') {
+                actions.activateBenchCard(index)
             } else if (action.onClick) {
                 // If the action has a custom handler
                 action.onClick();

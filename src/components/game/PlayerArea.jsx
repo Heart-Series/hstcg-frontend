@@ -6,65 +6,19 @@ import DeckPile from './DeckPile';
 import { useDroppable } from '@dnd-kit/core';
 import { useGameUI } from '../../context/GameUIContext';
 
-const BenchSlot = ({ card, index, isOpponent, gameState, activeDragData, isCardSelected, isCardTargetable }) => {
-    const { onCardClick, onActionClick } = useGameUI();
-
-    const droppableId = isOpponent ? `opponent-bench-slot-${index}` : `my-bench-slot-${index}`;
-    const { isOver, setNodeRef } = useDroppable({
-        id: droppableId,
-        disabled: isOpponent,
-    });
-
-    const isValidDrop = () => {
-        if (!activeDragData || !gameState || card) return false; // Cannot drop on an occupied slot
-        const draggedCard = activeDragData.cardData;
-
-        return gameState.phase === 'main_phase' && draggedCard?.cardType === 'Player';
-    };
-
-    const canDrop = isOver && isValidDrop();
-    const isInvalidDrop = isOver && !isValidDrop();
-
-    return (
-        <div
-            ref={setNodeRef}
-            className={`transition-all duration-150 w-32 aspect-[3/4] mx-auto 
-                ${canDrop ? 'bg-green-500/40 scale-105' : ''}
-                ${isInvalidDrop ? 'bg-red-500/40' : ''}
-            `}
-        >
-            {card ? (
-                <CardOnField
-                    cardData={card}
-                    droppableId={droppableId}
-                    activeDragData={activeDragData}
-                    gameState={gameState}
-                    isSelected={isCardSelected(droppableId)}
-                    isTargetable={isCardTargetable(droppableId)}
-                    onCardClick={onCardClick}
-                    onActionClick={onActionClick}
-                />
-            ) : (
-                <CardSlot label={`Bench ${index + 1}`} />
-            )}
-        </div>
-    );
-};
-
-
 const PlayerArea = ({
     playerState,
     isOpponent = false,
     actions,
     gameState,
     activeDragData
-    // Remove selectedCard, onCardClick, onActionClick, targeting from props
 }) => {
     // Use useGameUI for UI state
-    const { selectedCard, onCardClick, onActionClick, targeting } = useGameUI();
+    const { selectedCard, onCardClick, onActionClick, targeting, isMyTurn, actionsRef } = useGameUI();
     const { activeCard, bench, supportCard, attachedItems, deck, discard } = playerState;
     const playerPrefix = isOpponent ? 'opponent' : 'my';
 
+    // --- BENCH DROPPABLES & LOGIC ---
     const renderBench = () => {
         const benchSlots = Array(4).fill(null);
         bench.forEach((card, index) => {
@@ -72,38 +26,102 @@ const PlayerArea = ({
                 benchSlots[index] = card;
             }
         });
+        console.log(benchSlots)
 
-        return benchSlots.map((card, index) => (
-            <BenchSlot
-                key={index}
-                card={card}
-                index={index}
-                isOpponent={isOpponent}
-                gameState={gameState}
-                activeDragData={activeDragData}
-                isCardSelected={isCardSelected}
-                isCardTargetable={isCardTargetable}
-            />
-        ));
+        return benchSlots.map((card, index) => {
+            const droppableId = isOpponent ? `opponent-bench-${index}` : `my-bench-${index}`;
+            // Enable droppable for opponent slots if dragging an Item card with validTargets
+            const draggedCard = activeDragData?.cardData;
+            const isItemDrag = draggedCard?.cardType === 'Item' && Array.isArray(draggedCard.validTargets);
+            const droppableDisabled = isOpponent && !(isItemDrag && draggedCard.validTargets.some(t => t.startsWith('opponent')));
+            const { isOver, setNodeRef } = useDroppable({
+                id: droppableId,
+                disabled: droppableDisabled,
+            });
+            const isValidDrop = () => {
+                if (!activeDragData || !gameState || card) return false; // Cannot drop on an occupied slot
+                // --- Use validTargets for Item cards ---
+                if (isItemDrag) {
+                    const parts = droppableId.split('-');
+                    const owner = parts[0];
+                    const zone = parts[1];
+                    const idx = parts[2];
+                    const targetString = idx !== undefined ? `${owner}_${zone}_${idx}` : `${owner}_${zone}`;
+                    return draggedCard.validTargets.includes(targetString);
+                }
+                // Default: Only allow Player cards in main phase
+                return gameState.phase === 'main_phase' && draggedCard?.cardType === 'Player';
+            };
+            const canDrop = isOver && isValidDrop();
+            const isInvalidDrop = isOver && !isValidDrop();
+            return (
+                <div
+                    key={index}
+                    ref={setNodeRef}
+                    className={`transition-all duration-150 w-32 aspect-[3/4] mx-auto 
+                        ${canDrop ? 'bg-green-500/40 scale-105' : ''}
+                        ${isInvalidDrop ? 'bg-red-500/40' : ''}
+                    `}
+                >
+                    {card ? (
+                        <CardOnField
+                            cardData={card}
+                            droppableId={droppableId}
+                            activeDragData={activeDragData}
+                            gameState={gameState}
+                            isSelected={selectedCard === droppableId}
+                            isTargetable={(() => {
+                                if (!targeting.isTargeting || !targeting.action || !Array.isArray(targeting.action.validTargets)) return false;
+                                const parts = droppableId.split('-');
+                                const owner = parts[0];
+                                const zone = parts[1];
+                                const targetString = `${owner}_${zone}`;
+                                return targeting.action.validTargets.includes(targetString);
+                            })()}
+                            onCardClick={onCardClick}
+                            onActionClick={onActionClick}
+                        />
+                    ) : (
+                        <CardSlot label={`Bench ${index + 1}`} />
+                    )}
+                </div>
+            );
+        });
     };
 
     // --- Droppable Hook Call #1: For the ACTIVE SLOT ---
     const { isOver: isActiveSlotOver, setNodeRef: setActiveSlotRef } = useDroppable({
-        id: isOpponent ? 'opponent-active-slot' : 'my-active-slot',
-        disabled: isOpponent,
+        id: isOpponent ? 'opponent-active' : 'my-active',
+        // disabled: isOpponent,
     });
 
     // --- Droppable Hook Call #2: For the SUPPORT SLOT ---
     const { isOver: isSupportSlotOver, setNodeRef: setSupportSlotRef } = useDroppable({
-        id: isOpponent ? 'opponent-support-slot' : 'my-support-slot',
-        disabled: isOpponent,
+        id: isOpponent ? 'opponent-support' : 'my-support',
+        // disabled: isOpponent,
     });
 
     // --- Validation Logic for ACTIVE SLOT ---
     const isValidDropOnActive = () => {
         if (!activeDragData || !gameState) return false;
         const draggedCard = activeDragData.cardData;
-        return gameState.phase === 'setup' && draggedCard?.cardType === 'Player' && !playerState.hasChosenActive;
+        console.log(draggedCard)
+        // --- Use validTargets for Item cards ---
+        if (draggedCard?.cardType === 'Item' && Array.isArray(draggedCard.validTargets)) {
+            const droppableId = isOpponent ? 'opponent-active' : 'my-active';
+            const parts = droppableId.split('-');
+            const owner = parts[0];
+            const zone = parts[1];
+            const targetString = `${owner}_${zone}`;
+            console.log(droppableId, targetString)
+            return draggedCard.validTargets.includes(targetString);
+        }
+        if (draggedCard?.cardType === 'Player') {
+            return gameState.phase === 'setup' && !playerState.hasChosenActive; 
+        } else if (draggedCard?.cardType === 'Item') {
+            return playerState.activeCard       
+        }
+        
     };
     const canDropOnActive = isActiveSlotOver && isValidDropOnActive();
     const isInvalidDropOnActive = isActiveSlotOver && !isValidDropOnActive();
@@ -117,82 +135,80 @@ const PlayerArea = ({
     const canDropOnSupport = isSupportSlotOver && isValidDropOnSupport();
     const isInvalidDropOnSupport = isSupportSlotOver && !isValidDropOnSupport();
 
-    // Helper to determine if a specific card is selected
-    const isCardSelected = (droppableId) => selectedCard === droppableId;
-
-    // Helper to determine if a card is a valid target
-    const isCardTargetable = (droppableId) => {
-        if (!targeting.isTargeting || !targeting.action || !Array.isArray(targeting.action.validTargets)) return false;
-        // Parse droppableId: e.g. 'my-bench-slot-2', 'opponent-active-card'
-        console.log(droppableId)
-        const parts = droppableId.split('-');
-        const owner = parts[0]; // 'my' or 'opponent'
-        const zone = parts[1]; // 'bench', 'active', etc.
-        // Compose the target string as used in validTargets
-        console.log(targeting)
-        const targetString = `${owner}_${zone}`;
-        // Check if this string is in validTargets
-        return targeting.action.validTargets.includes(targetString);
-    };
-
     const mainRowOrder = isOpponent ? 'flex-row' : 'flex-row-reverse';
 
     return (
-        <div className={`flex flex-row w-full h-full gap-4 mx-4`}>
-            <div className="content-center">
-                <DeckPile type="Deck" count={deck.length}></DeckPile>
+        <div className="relative w-full h-full mx-auto overflow-visible">
+            {/* Points Indicator */}
+            <div
+                className={`absolute ${isOpponent ? 'top-2 right-2' : 'bottom-2 right-2'} bg-yellow-600 text-white rounded-lg px-3 py-1 text-sm font-bold shadow-md z-20`}
+                style={{ pointerEvents: 'none' }}
+            >
+                Points: {playerState?.points ?? 0}
             </div>
-            <div className={`w-full h-full flex gap-2 justify-around mx-4 ${isOpponent ? 'flex-col' : 'flex-col-reverse'}`}>
 
-                {/* --- Bench Row --- */}
-                <div className="grid grid-cols-4 gap-1 content-between">
-                    {renderBench()}
+            <div className={`flex flex-row w-full h-full gap-4 px-2`}>
+                <div className="content-center">
+                    <DeckPile type="Deck" count={deck.length}></DeckPile>
                 </div>
+                <div className={`w-full h-full flex gap-2 justify-around ${isOpponent ? 'flex-col' : 'flex-col-reverse'}`}>
 
-                {/* --- Active/Support Row --- */}
-                <div className={`flex flex-row gap-2 justify-around`}>
-
-                    <div className="w-32"></div>
-
-
-                    {/* Active Card - centered */}
-                    <div class="w-32"
-                        ref={setActiveSlotRef} // This makes the whole area a drop zone
-                        className={`w-32 aspect-[3/4] rounded-lg transition-all duration-150
-                            ${canDropOnActive ? 'bg-green-500/40 scale-105' : ''}
-                            ${isInvalidDropOnActive ? 'bg-red-500/40' : ''}
-                        `}
-                    >
-                        {activeCard
-                            ? <CardOnField
-                                cardData={activeCard}
-                                droppableId={`${playerPrefix}-active-card`}
-                                activeDragData={activeDragData}
-                                gameState={gameState}
-                                isSelected={isCardSelected(`${playerPrefix}-active-card`)}
-                                isTargetable={isCardTargetable(`${playerPrefix}-active-card`)}
-                                onCardClick={onCardClick}
-                                onActionClick={onActionClick}
-                            />
-                            : <CardSlot />
-                        }
+                    {/* --- Bench Row --- */}
+                    <div className="grid grid-cols-4 gap-1 content-between">
+                        {renderBench()}
                     </div>
 
-                    {/* Support Card - positioned to the right */}
-                    <div
-                        ref={setSupportSlotRef}
-                        className={`w-32 aspect-[3/4] rounded-lg transition-all duration-150
-                            ${canDropOnSupport ? 'bg-green-500/40 scale-105' : ''}
-                            ${isInvalidDropOnSupport ? 'bg-red-500/40' : ''}
-                        `}
-                    >
-                        {supportCard ? <CardOnField cardData={supportCard} /> : <CardSlot />}
-                    </div>
+                    {/* --- Active/Support Row --- */}
+                    <div className={`flex flex-row gap-2 justify-around`}>
 
+                        <div className="w-32"></div>
+
+                        {/* Active Card - centered */}
+                        <div
+                            ref={setActiveSlotRef}
+                            className={`w-32 aspect-[3/4] rounded-lg transition-all duration-150
+                                ${canDropOnActive ? 'bg-green-500/40 scale-105' : ''}
+                                ${isInvalidDropOnActive ? 'bg-red-500/40' : ''}
+                            `}
+                        >
+                            {activeCard
+                                ? <CardOnField
+                                    cardData={activeCard}
+                                    droppableId={`${playerPrefix}-active`}
+                                    activeDragData={activeDragData}
+                                    gameState={gameState}
+                                    isSelected={selectedCard === `${playerPrefix}-active`}
+                                    isTargetable={(() => {
+                                        if (!targeting.isTargeting || !targeting.action || !Array.isArray(targeting.action.validTargets)) return false;
+                                        const parts = `${playerPrefix}-active`.split('-');
+                                        const owner = parts[0];
+                                        const zone = parts[1];
+                                        const targetString = `${owner}_${zone}`;
+                                        return targeting.action.validTargets.includes(targetString);
+                                    })()}
+                                    onCardClick={onCardClick}
+                                    onActionClick={onActionClick}
+                                />
+                                : <CardSlot />
+                            }
+                        </div>
+
+                        {/* Support Card - positioned to the right */}
+                        <div
+                            ref={setSupportSlotRef}
+                            className={`w-32 aspect-[3/4] rounded-lg transition-all duration-150
+                                ${canDropOnSupport ? 'bg-green-500/40 scale-105' : ''}
+                                ${isInvalidDropOnSupport ? 'bg-red-500/40' : ''}
+                            `}
+                        >
+                            {supportCard ? <CardOnField cardData={supportCard} /> : <CardSlot />}
+                        </div>
+
+                    </div>
                 </div>
-            </div>
-            <div className="content-center">
-                <DeckPile type="Discard" count={discard.length} cardData={discard[0]} />
+                <div className="content-center">
+                    <DeckPile type="Discard" count={discard.length} cardData={discard[0]} />
+                </div>
             </div>
         </div>
     );
