@@ -7,6 +7,7 @@ import { useParams } from 'react-router-dom';
 export const useGameEngine = (initialGameState) => {
     const [gameState, setGameState] = useState(initialGameState);
     const [error, setError] = useState(null); // To display game errors
+    const [promptChoice, setPromptChoice] = useState(null);
     const socket = useSocket();
     const { user } = useAuth();
     const { gameId } = useParams();
@@ -17,11 +18,8 @@ export const useGameEngine = (initialGameState) => {
 
         const handleGameUpdate = (newGameState) => {
             console.log("Received game:updated", newGameState);
-            // console.log("socket.id:", socket?.id);
-            // console.log("players:", gameState?.players);
-            // console.log("myPlayerState:", newGameState?.players[socket?.id]);
-            // console.log("opponentState:", Object.values(newGameState?.players || {}).find(p => p.socketId !== socket?.id));
             setGameState(newGameState);
+            setPromptChoice(null); // Clear any prompt on game update
         };
         const handleGameError = (errorMessage) => {
             console.error("Game Error:", errorMessage);
@@ -29,76 +27,67 @@ export const useGameEngine = (initialGameState) => {
             // Clear the error message after a few seconds
             setTimeout(() => setError(null), 3000);
         };
-
+        const handlePromptChoice = (payload) => {
+            console.log("Received game:promptChoice", payload);
+            setPromptChoice(payload);
+        };
 
         socket.on('game:updated', handleGameUpdate);
         socket.on('game:error', handleGameError);
+        socket.on('game:promptChoice', handlePromptChoice);
 
         return () => {
             socket.off('game:updated', handleGameUpdate);
             socket.off('game:error', handleGameError);
+            socket.off('game:promptChoice', handlePromptChoice);
         };
     }, [socket]);
 
-    // --- Player Actions ---
-    // These are the functions the UI will call. They are stable and don't change.
-    const playCard = useCallback((cardId, target) => {
+    // --- Unified Player Action ---
+    const performAction = useCallback((type, payload = {}) => {
         if (socket) {
-            socket.emit('game:playCard', { gameId, cardId, target });
+            socket.emit('game:action', { type, payload });
         }
-    }, [socket, gameId]);
+    }, [socket]);
+
+    // --- Player Actions ---
+    // These now call performAction with the correct type and payload
+    const playCard = useCallback((cardId, target) => {
+        performAction('playCardFromHand', { cardId, target });
+    }, [performAction]);
 
     const endTurn = useCallback(() => {
-        console.log("END TURN")
-        if (socket) {
-            socket.emit('game:endTurn'); // The handler knows the gameId from the socket
-        }
-    }, [socket]);
+        performAction('endTurn');
+    }, [performAction]);
 
-    const setInitialActive = useCallback((cardHandIndex) => {
-        if (socket) {
-            socket.emit('game:setInitialActive', { cardHandIndex });
-        }
-    }, [socket]);
+    const setInitialActive = useCallback((instanceId) => {
+        performAction('setInitialActive', { instanceId });
+    }, [performAction]);
 
-    const playCardToBench = useCallback((cardHandIndex, benchIndex) => {
-        if (socket) {
-            socket.emit('game:playToBench', { cardHandIndex, benchIndex });
-        }
-    }, [socket]);
+    const playCardToBench = useCallback((instanceId, benchIndex) => {
+        performAction('playCardToBench', { instanceId, benchIndex });
+    }, [performAction]);
 
-    const playSupportCard = useCallback((cardHandIndex) => {
-        if (socket) {
-            socket.emit('game:playSupportCard', { cardHandIndex });
-        }
-    }, [socket]);
+    const playSupportCard = useCallback((instanceId) => {
+        performAction('playSupportCard', { instanceId });
+    }, [performAction]);
 
-    const playItemCard = useCallback((cardHandIndex, target) => {
-        if (socket) {
-            socket.emit('game:playItemCard', { cardHandIndex, target });
-        }
-    }, [socket]);
+    const playItemCard = useCallback((instanceId, target, phase = 1, choosingState = null) => {
+        performAction('playItemCard', { instanceId, target, phase, choosingState });
+    }, [performAction]);
+
 
     const performAttack = useCallback((attackType, target) => {
-        if (socket) {
-            socket.emit('game:performAttack', { attackType, target });
-        }
-    }, [socket]);
+        performAction('performAttack', { attackType, target });
+    }, [performAction]);
 
     const retreatActiveCard = useCallback((benchIndex) => {
-        if (socket) {
-            socket.emit('game:retreatActiveCard', { benchIndex });
-        }
-    }, [socket]);
-
+        performAction('retreatActiveCard', { benchIndex });
+    }, [performAction]);
 
     const activateBenchCard = useCallback((benchIndex) => {
-        if (socket) {
-            socket.emit('game:activateBenchCard', { benchIndex });
-        }
-    }, [socket]);
-
-    // ... other actions like attack, useAbility, etc. ...
+        performAction('activateBenchCard', { benchIndex });
+    }, [performAction]);
 
     // --- Derived State ---
     // Helper values to make the UI components' lives easier.
@@ -118,6 +107,7 @@ export const useGameEngine = (initialGameState) => {
         opponentState,
         isMyTurn,
         canPerformAction,
+        promptChoice,
         actions: {
             playCard,
             endTurn,

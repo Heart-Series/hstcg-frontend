@@ -17,7 +17,10 @@ const CardOnField = ({
     return (
         <div
             // The onClick handler is added to the same div
-            onClick={() => onCardClick(cardData, droppableId)}
+            onClick={(e) => {
+                e.stopPropagation()
+                onCardClick(cardData, droppableId)
+            }}
             className={`w-full h-full rounded-lg transition-all duration-150 relative cursor-pointer
                   
                 ${isTargetable ? 'ring-4 ring-yellow-400 animate-pulse' : ''} 

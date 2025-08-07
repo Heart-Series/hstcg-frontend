@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import Card from '../Card'; // Your main card component
 import { useGameUI } from '../../context/GameUIContext';
+import { useGameEngine } from '../../hooks/useGameEngine';
 
 const DraggableCard = ({ card, cardHandIndex, canPerformAction }) => {
     // console.log(`Can Perform Action: ${canPerformAction}`)
@@ -34,22 +35,48 @@ const DraggableCard = ({ card, cardHandIndex, canPerformAction }) => {
     );
 };
 
-const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction }) => {
-    // Use useGameUI for isOpen and setIsOpen
-    const { isHandOpen, setIsHandOpen } = useGameUI();
+const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction, promptChoice }) => {
+    const { isHandOpen, setIsHandOpen, targeting, setTargeting } = useGameUI();
+    const { actions } = useGameEngine();
 
-    // This is the "abstracted trigger" you mentioned.
-    // For now, it's a simple button, but it could be triggered by other events.
-    const toggleHand = () => setIsHandOpen(!isHandOpen);
+    // --- Multi-phase targeting logic ---
+    const handleCardDrop = (card, initialTarget) => {
+        actions.playItemCard(
+            card.cardHandIndex ?? cards.findIndex(c => c.id === card.id),
+            initialTarget,
+            1,
+            null,
+            (response) => {
+                console.log('Ender Pearl response:', response);
+                if (response.choosingPhase) {
+                    setTargeting({
+                        isTargeting: true,
+                        card,
+                        phase: response.phase,
+                        validTargets: response.validTargets,
+                        chosenTargets: [initialTarget],
+                        cancelable: true
+                    });
+                } else {
+                    setTargeting({ isTargeting: false });
+                }
+            }
+        );
+    };
 
+    // --- Cancel button logic ---
+    const handleCancel = () => {
+        setTargeting({ isTargeting: false });
+    };
+
+    // --- UI rendering ---
     return (
         <>
-            {/* --- The Trigger Button --- */}
+            {/* Trigger Button */}
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-30">
                 <button
-                    onClick={toggleHand}
+                    onClick={() => setIsHandOpen(!isHandOpen)}
                     className="px-8 py-2 bg-blue-600 text-white font-bold rounded-t-lg shadow-lg hover:bg-blue-700 transition-all duration-300"
-                    // Add a glowing effect if it's the player's turn
                     style={{
                         boxShadow: isMyTurn ? '0 0 15px rgba(59, 130, 246, 0.8)' : '',
                         animation: isMyTurn ? 'pulse 2s infinite' : 'none'
@@ -59,21 +86,19 @@ const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction }) => {
                 </button>
             </div>
 
-            {/* --- The Hand Drawer --- */}
+            {/* Hand Drawer */}
             <div
-                className={`fixed bottom-0 left-0 w-full bg-gray-900 bg-opacity-80 backdrop-blur-sm p-4 border-t-2 border-blue-500 shadow-2xl z-20 transition-transform duration-500 ease-in-out ${isHandOpen ? 'translate-y-0' : 'translate-y-full'
-                    }`}
+                className={`fixed bottom-0 left-0 w-full bg-gray-900 bg-opacity-80 backdrop-blur-sm p-4 border-t-2 border-blue-500 shadow-2xl z-20 transition-transform duration-500 ease-in-out ${isHandOpen ? 'translate-y-0' : 'translate-y-full'}`}
             >
-                {/* Horizontal Scrolling Container */}
                 <div className="flex flex-nowrap overflow-x-auto gap-4 pb-4">
                     {cards.length > 0 ? (
                         cards.map((card, index) => (
-                              <DraggableCard
+                            <DraggableCard
                                 key={`${card.id}-${index}`}
-                                // Pass `card`, not `cardData`
-                                card={card} 
+                                card={card}
                                 cardHandIndex={index}
                                 canPerformAction={canPerformAction}
+                                onDrop={handleCardDrop}
                             />
                         ))
                     ) : (
@@ -81,6 +106,16 @@ const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction }) => {
                     )}
                 </div>
             </div>
+
+            {/* Cancel button for choosing phase */}
+            {targeting.isTargeting && targeting.cancelable && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+                    <button
+                        className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-600"
+                        onClick={handleCancel}
+                    >Cancel</button>
+                </div>
+            )}
         </>
     );
 };

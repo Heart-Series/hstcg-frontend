@@ -11,7 +11,7 @@ import DeckLibrary from './pages/DeckLibrary';
 import DeckBuilder from './pages/DeckBuilder';
 import LobbyListPage from './pages/LobbyListPage';
 import LobbyPage from './pages/LobbyPage';      
-import GamePage from './pages/GamePage';        
+import GamePage     from './pages/GamePage';        
 
 // A simple component for the home page
 const HomePage = () => (

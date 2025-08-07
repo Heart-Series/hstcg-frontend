@@ -4,11 +4,21 @@ import PlayerArea from './PlayerArea';
 import DeckPile from './DeckPile';
 import { useGameUI } from '../../context/GameUIContext';
 
-const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState, activeDragData }) => {
-    const { selectedCard, onCardClick, onActionClick, targeting } = useGameUI();
+const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState, activeDragData, promptChoice }) => {
+    const { selectedCard, onCardClick, onActionClick, targeting, cancelAllActions } = useGameUI();
 
+    // --- Highlight valid targets if promptChoice is active ---
+    const getTargetingForPrompt = () => {
+        if (targeting.isTargeting && targeting.action && Array.isArray(targeting.validTargets)) {
+            return targeting.validTargets;
+        }
+        return [];
+    };
+    const validTargets = getTargetingForPrompt();
+
+    // Pass validTargets to PlayerArea for contextual highlighting
     return (
-        <div className="flex-grow flex flex-col justify-center items-center gap-2 h-full py-2 relative">
+        <div className="flex-grow flex flex-col justify-center items-center gap-2 h-full py-2 relative"  onClick={cancelAllActions}>
             {/* --- Turn Indicator: Always Top Left --- */}
             <div
                 className="absolute top-4 left-4 z-30 bg-slate-700 bg-opacity-90 rounded-lg shadow-lg px-4 py-2 flex flex-col items-start"
@@ -25,18 +35,18 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
                     Turn {gameState.turn}
                 </p>
                 {isMyTurn && (
-                <button
-                    className="absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-2 bg-red-600 text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-all duration-300 z-40"
-                    onClick={actions.endTurn}
-                >
-                    End Turn
-                </button>
-            )}
+                    <button
+                        className="absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-2 bg-red-600 text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-all duration-300 z-40"
+                        onClick={actions.endTurn}
+                    >
+                        End Turn
+                    </button>
+                )}
             </div>
 
             {/* Opponent's Area (rendered in reverse) */}
             <div className="flex-1 flex items-end justify-center w-full">
-                <PlayerArea playerState={opponentState} isOpponent={true} actions={actions} gameState={gameState} activeDragData={activeDragData}  />
+                <PlayerArea playerState={opponentState} isOpponent={true} actions={actions} gameState={gameState} activeDragData={activeDragData} promptChoice={promptChoice} validTargets={validTargets} />
             </div>
 
             {/* A simple divider for the middle of the board */}
@@ -44,7 +54,7 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
 
             {/* My Area */}
             <div className="flex-1 flex items-start justify-center w-full">
-                <PlayerArea playerState={myPlayerState} isOpponent={false} actions={actions} gameState={gameState} activeDragData={activeDragData}  />
+                <PlayerArea playerState={myPlayerState} isOpponent={false} actions={actions} gameState={gameState} activeDragData={activeDragData} promptChoice={promptChoice} validTargets={validTargets} />
             </div>
         </div>
     );

@@ -11,10 +11,12 @@ const PlayerArea = ({
     isOpponent = false,
     actions,
     gameState,
-    activeDragData
+    activeDragData,
+    promptChoice,
+    validTargets = [], // NEW: valid targets for promptChoice
 }) => {
     // Use useGameUI for UI state
-    const { selectedCard, onCardClick, onActionClick, targeting, isMyTurn, actionsRef } = useGameUI();
+    const { selectedCard, setSelectedCard, onCardClick, onActionClick, targeting, setTargeting, isMyTurn, actionsRef } = useGameUI();
     const { activeCard, bench, supportCard, attachedItems, deck, discard } = playerState;
     const playerPrefix = isOpponent ? 'opponent' : 'my';
 
@@ -26,34 +28,47 @@ const PlayerArea = ({
                 benchSlots[index] = card;
             }
         });
-        console.log(benchSlots)
-
         return benchSlots.map((card, index) => {
             const droppableId = isOpponent ? `opponent-bench-${index}` : `my-bench-${index}`;
-            // Enable droppable for opponent slots if dragging an Item card with validTargets
-            const draggedCard = activeDragData?.cardData;
-            const isItemDrag = draggedCard?.cardType === 'Item' && Array.isArray(draggedCard.validTargets);
-            const droppableDisabled = isOpponent && !(isItemDrag && draggedCard.validTargets.some(t => t.startsWith('opponent')));
             const { isOver, setNodeRef } = useDroppable({
                 id: droppableId,
-                disabled: droppableDisabled,
+                disabled: isOpponent,
             });
             const isValidDrop = () => {
-                if (!activeDragData || !gameState || card) return false; // Cannot drop on an occupied slot
-                // --- Use validTargets for Item cards ---
-                if (isItemDrag) {
-                    const parts = droppableId.split('-');
-                    const owner = parts[0];
-                    const zone = parts[1];
-                    const idx = parts[2];
-                    const targetString = idx !== undefined ? `${owner}_${zone}_${idx}` : `${owner}_${zone}`;
-                    return draggedCard.validTargets.includes(targetString);
+                if (!activeDragData) return false;
+                const draggedCard = activeDragData.cardData;
+
+                // Case 1: Dragging an Item (like Frog)
+                if (draggedCard?.cardType === 'Item') {
+                    // It's a valid drop IF the slot is OCCUPIED by a player card
+                    // AND this bench slot is in the item's validTargets.
+                    if (!card) return false; // Must have a card to attach to.
+
+                    const targetString = `${playerPrefix}_bench`; // e.g., 'my_bench'
+                    return draggedCard.validTargets?.includes(targetString);
                 }
-                // Default: Only allow Player cards in main phase
-                return gameState.phase === 'main_phase' && draggedCard?.cardType === 'Player';
+
+                // Case 2: Dragging a Player card
+                if (draggedCard?.cardType === 'Player') {
+                    // It's a valid drop IF the slot is EMPTY.
+                    return !card;
+                }
+
+                // Default: not a valid drop
+                return false;
             };
             const canDrop = isOver && isValidDrop();
             const isInvalidDrop = isOver && !isValidDrop();
+
+            // --- Targetable logic: use both targeting and validTargets ---
+            const isTargetable = (
+                (targeting.isTargeting && targeting.action && Array.isArray(targeting.action.validTargets) &&
+                    (targeting.action.validTargets.includes(`${isOpponent ? 'opponent' : 'my'}_bench_${index}`) || targeting.action.validTargets.includes(`${isOpponent ? 'opponent' : 'my'}_bench`)))
+                ||
+                (Array.isArray(validTargets) &&
+                    (validTargets.includes(`${isOpponent ? 'opponent' : 'my'}_bench_${index}`) || validTargets.includes(`${isOpponent ? 'opponent' : 'my'}_bench`)))
+            );
+
             return (
                 <div
                     key={index}
@@ -70,15 +85,8 @@ const PlayerArea = ({
                             activeDragData={activeDragData}
                             gameState={gameState}
                             isSelected={selectedCard === droppableId}
-                            isTargetable={(() => {
-                                if (!targeting.isTargeting || !targeting.action || !Array.isArray(targeting.action.validTargets)) return false;
-                                const parts = droppableId.split('-');
-                                const owner = parts[0];
-                                const zone = parts[1];
-                                const targetString = `${owner}_${zone}`;
-                                return targeting.action.validTargets.includes(targetString);
-                            })()}
-                            onCardClick={onCardClick}
+                            isTargetable={isTargetable}
+                            onCardClick={(cardData, id) => onCardClick(cardData, id, isTargetable)}
                             onActionClick={onActionClick}
                         />
                     ) : (
@@ -105,23 +113,26 @@ const PlayerArea = ({
     const isValidDropOnActive = () => {
         if (!activeDragData || !gameState) return false;
         const draggedCard = activeDragData.cardData;
-        console.log(draggedCard)
-        // --- Use validTargets for Item cards ---
-        if (draggedCard?.cardType === 'Item' && Array.isArray(draggedCard.validTargets)) {
-            const droppableId = isOpponent ? 'opponent-active' : 'my-active';
-            const parts = droppableId.split('-');
-            const owner = parts[0];
-            const zone = parts[1];
-            const targetString = `${owner}_${zone}`;
-            console.log(droppableId, targetString)
-            return draggedCard.validTargets.includes(targetString);
+
+        // Case 1: Dragging an Item (like Invisibility Potion)
+        if (draggedCard?.cardType === 'Item') {
+            // It's a valid drop IF the active slot has a card 
+            // AND this active slot is in the item's validTargets.
+            if (!activeCard) return false; // Must have a card to attach to.
+
+            // This correctly checks 'my_active' vs 'opponent_active'
+            const targetString = `${playerPrefix}_active`;
+            return draggedCard.validTargets?.includes(targetString);
         }
+
+        // Case 2: Dragging a Player card
         if (draggedCard?.cardType === 'Player') {
-            return gameState.phase === 'setup' && !playerState.hasChosenActive; 
-        } else if (draggedCard?.cardType === 'Item') {
-            return playerState.activeCard       
+            // It's a valid drop IF it's the setup phase AND you haven't chosen a card yet.
+            return gameState.phase === 'setup' && !playerState.hasChosenActive;
         }
-        
+
+        // Default: not a valid drop
+        return false;
     };
     const canDropOnActive = isActiveSlotOver && isValidDropOnActive();
     const isInvalidDropOnActive = isActiveSlotOver && !isValidDropOnActive();
@@ -136,6 +147,15 @@ const PlayerArea = ({
     const isInvalidDropOnSupport = isSupportSlotOver && !isValidDropOnSupport();
 
     const mainRowOrder = isOpponent ? 'flex-row' : 'flex-row-reverse';
+
+    const isTargetable = () => {
+        if (!targeting.isTargeting || !targeting.action || !Array.isArray(targeting.action.validTargets)) return false;
+        const parts = `${playerPrefix}-active`.split('-');
+        const owner = parts[0];
+        const zone = parts[1];
+        const targetString = `${owner}_${zone}`;
+        return targeting.action.validTargets.includes(targetString);
+    }
 
     return (
         <div className="relative w-full h-full mx-auto overflow-visible">
@@ -178,15 +198,8 @@ const PlayerArea = ({
                                     activeDragData={activeDragData}
                                     gameState={gameState}
                                     isSelected={selectedCard === `${playerPrefix}-active`}
-                                    isTargetable={(() => {
-                                        if (!targeting.isTargeting || !targeting.action || !Array.isArray(targeting.action.validTargets)) return false;
-                                        const parts = `${playerPrefix}-active`.split('-');
-                                        const owner = parts[0];
-                                        const zone = parts[1];
-                                        const targetString = `${owner}_${zone}`;
-                                        return targeting.action.validTargets.includes(targetString);
-                                    })()}
-                                    onCardClick={onCardClick}
+                                    isTargetable={isTargetable()}
+                                    onCardClick={(cardData, id) => onCardClick(cardData, id, isTargetable())}
                                     onActionClick={onActionClick}
                                 />
                                 : <CardSlot />

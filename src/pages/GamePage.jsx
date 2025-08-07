@@ -1,6 +1,6 @@
 // src/pages/GamePage.jsx
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 
 import { useLocation } from 'react-router-dom';
@@ -24,6 +24,7 @@ const GamePageContent = ({ initialGameState }) => {
         isMyTurn,
         canPerformAction,
         actions,
+        promptChoice,
     } = useGameEngine(initialGameState);
 
     // UI state from context
@@ -47,54 +48,53 @@ const GamePageContent = ({ initialGameState }) => {
     const handleDragEnd = (event) => {
         const { active, over } = event;
 
-        // Reset the drag state
         setActiveDragId(null);
         setActiveDragData(null);
 
-        // If 'over' is null, it was dropped on a non-droppable area
         if (!over) return;
 
-        // 'active.id' is the ID of the card being dragged (e.g., "hand-card-index-0")
-        // 'over.id' is the ID of the droppable area it was dropped on (e.g., "my-active-slot")
-        const cardHandIndex = active.data.current?.cardHandIndex;
+        // --- THE ONLY IDENTIFIER WE NEED FROM THE DRAGGED CARD ---
+        const instanceId = active.data.current?.cardData?.instanceId;
+        if (!instanceId) return; // If for some reason there's no ID, do nothing.
+        console.log(instanceId)
+
         const dropZoneId = over.id;
 
         // --- Handle dropping based on the game phase and drop zone ID ---
+        if (active.data.current?.cardData?.cardType === 'Item') {
+            const parts = dropZoneId.split('-');
+            const owner = parts[0];
+            const zone = parts[1];
+            const idx = parts[2];
+
+            const target = {
+                playerId: owner === 'my' ? myPlayerState.socketId : opponentState.socketId,
+                zone: zone,
+                index: idx !== undefined ? parseInt(idx) : null,
+            };
+
+            // Call the correct action for items.
+            actions.playItemCard(instanceId, target);
+            return; // Action sent, stop processing.
+        }
+
+        // --- CHECK 2: Was something dropped on the active slot during setup? ---
         if (gameState.phase === 'setup' && dropZoneId === 'my-active') {
-            actions.setInitialActive(cardHandIndex);
+            actions.setInitialActive(instanceId);
+            return;
         }
 
-        if (gameState.phase === 'main_phase' && typeof dropZoneId === 'string' && dropZoneId.startsWith('my-bench-')) {
+        // --- CHECK 3: Was a PLAYER card dropped on a bench slot? ---
+        if (gameState.phase === 'main_phase' && dropZoneId.startsWith('my-bench-')) {
             const benchIndex = parseInt(dropZoneId.split('-')[2]);
-            actions.playCardToBench(cardHandIndex, benchIndex);
+            actions.playCardToBench(instanceId, benchIndex);
+            return;
         }
 
+        // --- CHECK 4: Was a SUPPORT card dropped on the support slot? ---
         if (gameState.phase === 'main_phase' && dropZoneId === 'my-support') {
-            actions.playSupportCard(cardHandIndex);
-            return; // Stop processing
-        }
-
-        // --- Use validTargets for Item cards ---
-        if (active.data.current?.cardData?.cardType === 'Item' && typeof dropZoneId === 'string') {
-            const draggedCard = active.data.current.cardData;
-            if (Array.isArray(draggedCard.validTargets)) {
-                // Convert dropZoneId to target string
-                const parts = dropZoneId.split('-');
-                const owner = parts[0];
-                const zone = parts[1];
-                const idx = parts[2];
-                const targetString = idx !== undefined ? `${owner}_${zone}_${idx}` : `${owner}_${zone}`;
-                if (draggedCard.validTargets.includes(targetString)) {
-                    // Construct the target object for the backend
-                    const target = {
-                        playerId: owner === 'my' ? myPlayerState.socketId : opponentState.socketId,
-                        zone: zone,
-                        index: idx !== undefined ? parseInt(idx) : null,
-                    };
-                    actions.playItemCard(cardHandIndex, target);
-                    return;
-                }
-            }
+            actions.playSupportCard(instanceId);
+            return;
         }
     };
 
@@ -123,6 +123,30 @@ const GamePageContent = ({ initialGameState }) => {
             </div>
         );
     }
+
+    // --- PromptChoice Integration ---
+    // If promptChoice is active, set up targeting system
+    useEffect(() => {
+        if (!promptChoice) return;
+        // Only handle target selection prompts (not generic options)
+        if (promptChoice.choiceType === 'target' && Array.isArray(promptChoice.options)) {
+            setTargeting({
+                isTargeting: true,
+                action: promptChoice,
+                validTargets: promptChoice.options,
+                chosenTargets: [],
+                cancelable: true
+            });
+        } else {
+            setTargeting({ isTargeting: false });
+        }
+    }, [promptChoice, setTargeting]);
+
+    // --- Debugging: Log targeting state ---
+    useEffect(() => {
+        console.log('Targeting State:', targeting);
+    }, [targeting]);
+
 
     return (
         <DndContext
@@ -153,6 +177,7 @@ const GamePageContent = ({ initialGameState }) => {
                         actions={actions}
                         gameState={gameState}
                         activeDragData={activeDragData}
+                        promptChoice={promptChoice}
                     />
                 </div>
 
@@ -164,6 +189,7 @@ const GamePageContent = ({ initialGameState }) => {
                     isOpen={isHandOpen}
                     setIsOpen={setIsHandOpen}
                     canPerformAction={canPerformAction}
+                    promptChoice={promptChoice}
                 />
             </div>
 
@@ -188,11 +214,12 @@ const GamePage = () => {
         actions,
         myPlayerState,
         opponentState,
+        promptChoice,
         ...rest
     } = useGameEngine(initialGameState);
 
     return (
-        <GameUIProvider actions={actions} myPlayerState={myPlayerState} opponentState={opponentState}>
+        <GameUIProvider actions={actions} myPlayerState={myPlayerState} opponentState={opponentState} promptChoice={promptChoice}>
             <GamePageContent initialGameState={initialGameState} />
         </GameUIProvider>
     );
