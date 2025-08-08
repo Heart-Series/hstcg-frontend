@@ -40,8 +40,10 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
             return;
         }
 
+        console.log(targeting.validTargets, clickedInstanceId);
+
         // Case 1: Resolving a prompt (from an item or attack)
-        if (targeting.isTargeting && targeting.validTargets?.includes(clickedInstanceId)) {
+        if (targeting.isTargeting && (targeting.validTargets?.includes(clickedInstanceId) || targeting.action.validTargets?.includes(clickedInstanceId))) {
             // We are targeting, and this card is a valid choice.
 
             // Is this target for a multi-step item effect? (like Piston phase 3)
