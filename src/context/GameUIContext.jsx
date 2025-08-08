@@ -6,7 +6,7 @@ const GameUIContext = createContext();
 export const useGameUI = () => useContext(GameUIContext);
 
 export const GameUIProvider = ({ children, myPlayerState, opponentState, actions, promptChoice }) => {
-    const [selectedCard, setSelectedCard] = useState(null);
+    const [selectedCardId, setSelectedCardId] = useState(null);
     const [targeting, setTargeting] = useState({
         isTargeting: false,
         action: null,
@@ -15,109 +15,98 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
     const [isHandOpen, setIsHandOpen] = useState(false);
     const [activeDragId, setActiveDragId] = useState(null);
     const [activeDragData, setActiveDragData] = useState(null);
+    const [inspectorCardData, setInspectorCardData] = useState(null);
+
+    const openInspector = (cardData) => {
+        setInspectorCardData(cardData);
+    };
+
+    const closeInspector = () => {
+        setInspectorCardData(null);
+    };
 
     const cancelAllActions = () => {
-        setSelectedCard(null);
+        setSelectedCardId(null);
         setTargeting({ isTargeting: false, action: null });
     };
 
     // Context-aware card click handler
-    const onCardClick = (card, droppableId, isTargetable) => {
-        // If the clicked card is not a valid target for the current action, do nothing.
-        // This prevents misclicks from having any effect.
-        if (targeting.isTargeting && !isTargetable && !promptChoice) {
-            return;
-        }
+    const onCardClick = (clickedCard, isTargetable) => {
+        const clickedInstanceId = clickedCard.instanceId;
 
-          if (droppableId === selectedCard) {
-            cancelAllActions(); // Toggles everything off.
-            return;
-        }
-
-
-        // Helper to create the target object
-        const createTarget = (id) => {
-            const parts = id.split('-');
-            const owner = parts[0];
-            const zone = parts[1];
-            const index = parts[2] !== undefined ? Number(parts[2]) : null;
-            return {
-                playerId: owner === 'my' ? myPlayerState.socketId : opponentState.socketId,
-                zone,
-                index,
-            };
-        };
-
-        // --- SCENARIO 1: Resolving a multi-step ITEM PROMPT ---
-        // We know it's an item prompt because 'promptChoice' is active.
-        if (isTargetable && promptChoice) {
-            const target = createTarget(droppableId);
-            actions.playItemCard(null, target, promptChoice.phase, promptChoice.choosingState);
-            // Don't clean up UI state here; wait for the 'game:updated' event from the server.
-            return;
-        }
-
-        // --- SCENARIO 2: Resolving a standard ACTION (like an attack) ---
-        // We know it's a standard action because 'targeting' is active, but 'promptChoice' is not.
-        if (targeting.isTargeting) {
-            if (!isTargetable) return;
-
-            const target = createTarget(droppableId);
-            const actionType = targeting.action?.type;
-
-            // --- THIS IS THE FIX: Check the action type ---
-            if (actionType === 'retreat') {
-                // The retreat action needs the bench index.
-                // We also add a sanity check to make sure we're targeting our own bench.
-                const owner = droppableId.split('-')[0];
-                if (owner === 'my' && target.zone === 'bench') {
-                    actions.retreatActiveCard(target.index);
-                }
-            }
-            else if (actionType === 'basic_attack' || actionType === 'special_attack') {
-                // This is the correct path for attacks
-                actions.performAttack(actionType, target);
-            }
-            // Future targeted actions can be added as more `else if` cases here.
-
-            // Clean up the UI state after the action is dispatched.
+        // Case 0: Toggling selection off
+        if (clickedInstanceId === selectedCardId) {
             cancelAllActions();
             return;
         }
 
-        // --- SCENARIO 3: Simply SELECTING a card ---
-        // If neither of the above are true, the user is just selecting a card to see its actions.
-        setSelectedCard(current => (current === droppableId ? null : droppableId));
+        // Case 1: Resolving a prompt (from an item or attack)
+        if (targeting.isTargeting && targeting.validTargets?.includes(clickedInstanceId)) {
+            // We are targeting, and this card is a valid choice.
+
+            // Is this target for a multi-step item effect? (like Piston phase 3)
+            if (promptChoice) {
+                actions.playItemCard(
+                    null, // No new card instanceId from hand
+                    clickedInstanceId, // The instanceId of the card we just clicked
+                    promptChoice.phase,
+                    promptChoice.choosingState
+                );
+            }
+            // Is this target for a standard attack or retreat?
+            else if (targeting.action) {
+                const actionType = targeting.action.type;
+                if (actionType === 'retreat') {
+                    const benchIndex = myPlayerState.bench.findIndex(c => c && c.instanceId === clickedInstanceId);
+                    if (benchIndex > -1) actions.retreatActiveCard(benchIndex);
+                } else if (actionType === 'basic_attack' || actionType === 'special_attack') {
+                    actions.performAttack(actionType, clickedInstanceId);
+                }
+            }
+
+            // Action sent, so we clear all selections and targeting states.
+            cancelAllActions();
+            return;
+        }
+
+        // Case 2: Selecting a new card
+        if (clickedInstanceId === selectedCardId) {
+            cancelAllActions();
+        } else {
+            // Select a new card
+            setSelectedCardId(clickedInstanceId);
+        }
     };
 
-    // This function is now perfect. It sets the state to begin SCENARIO 2.
-    const onActionClick = (action, sourceCardId) => {
+    // onActionClick now just sets targeting state.
+    const onActionClick = (action, sourceCardData) => {
+        if (action.type === 'view') {
+            openInspector(sourceCardData);
+            setSelectedCardId(null);
+            return;
+        }
         if (action.requiresTarget) {
-            setTargeting({
-                isTargeting: true,
-                action: action,
-            });
-            // We keep the card selected so the user knows which card is attacking
+            setTargeting({ isTargeting: true, action: action });
+            // selectedCardId remains set, so we know who is attacking.
         } else {
-            // Logic for no-target actions can go here
-            if (action.type === 'activate') {
-                const index = sourceCardId.split("-")[2];
-                actions.activateBenchCard(index);
-            }
-            setSelectedCard(null);
+            // ... non-targeted actions like 'activate' ...
+            setSelectedCardId(null);
         }
     };
 
     return (
         <GameUIContext.Provider value={{
-            selectedCard, setSelectedCard,
+            selectedCardId, setSelectedCardId,
             targeting, setTargeting,
             isHandOpen, setIsHandOpen,
             activeDragId, setActiveDragId,
             activeDragData, setActiveDragData,
             onCardClick,
             onActionClick,
-            cancelAllActions
+            cancelAllActions,
+            inspectorCardData,
+            openInspector,
+            closeInspector
         }}>
             {children}
         </GameUIContext.Provider>

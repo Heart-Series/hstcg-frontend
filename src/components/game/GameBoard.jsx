@@ -3,6 +3,7 @@ import React from 'react';
 import PlayerArea from './PlayerArea';
 import DeckPile from './DeckPile';
 import { useGameUI } from '../../context/GameUIContext';
+import InspectorPanel from './InspectorPanel';
 
 const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState, activeDragData, promptChoice }) => {
     const { selectedCard, onCardClick, onActionClick, targeting, cancelAllActions } = useGameUI();
@@ -18,7 +19,8 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
 
     // Pass validTargets to PlayerArea for contextual highlighting
     return (
-        <div className="flex-grow flex flex-col justify-center items-center gap-2 h-full py-2 relative"  onClick={cancelAllActions}>
+        <div className="flex-grow flex flex-col justify-center items-center gap-2 h-full py-2 relative" onClick={cancelAllActions}>
+            <InspectorPanel />
             {/* --- Turn Indicator: Always Top Left --- */}
             <div
                 className="absolute top-4 left-4 z-30 bg-slate-700 bg-opacity-90 rounded-lg shadow-lg px-4 py-2 flex flex-col items-start"

@@ -16,6 +16,17 @@ import Card from '../components/Card';
 
 const GamePageContent = ({ initialGameState }) => {
     // Initialize the game engine
+
+    // UI state from context
+    const {
+        selectedCard, setSelectedCard,
+        targeting, setTargeting,
+        isHandOpen, setIsHandOpen,
+        activeDragId, setActiveDragId,
+        activeDragData, setActiveDragData,
+        openInspector
+    } = useGameUI();
+
     const {
         gameState,
         error,
@@ -25,16 +36,7 @@ const GamePageContent = ({ initialGameState }) => {
         canPerformAction,
         actions,
         promptChoice,
-    } = useGameEngine(initialGameState);
-
-    // UI state from context
-    const {
-        selectedCard, setSelectedCard,
-        targeting, setTargeting,
-        isHandOpen, setIsHandOpen,
-        activeDragId, setActiveDragId,
-        activeDragData, setActiveDragData,
-    } = useGameUI();
+    } = useGameEngine(initialGameState, { openInspector });
 
     const handleDragStart = (event) => {
         const { active } = event;
@@ -54,11 +56,29 @@ const GamePageContent = ({ initialGameState }) => {
         if (!over) return;
 
         // --- THE ONLY IDENTIFIER WE NEED FROM THE DRAGGED CARD ---
+        const draggedCard = active.data.current?.cardData;
         const instanceId = active.data.current?.cardData?.instanceId;
         if (!instanceId) return; // If for some reason there's no ID, do nothing.
         console.log(instanceId)
 
         const dropZoneId = over.id;
+
+        if (draggedCard?.initiatesUI === 'inspector') {
+            const parts = dropZoneId.split('-');
+            const owner = parts[0];
+            const zone = parts[1];
+            const index = parts[2] !== undefined ? parseInt(idx) : null;
+
+            // Find the card that was dropped on from the gameState
+            const player = owner === 'my' ? myPlayerState : opponentState;
+            const targetCard = zone === 'active' ? player.activeCard : player.bench[index];
+
+            if (targetCard) {
+                openInspector(targetCard);
+            }
+            // We do NOT send an action to the backend yet. The UI takes over.
+            return;
+        }
 
         // --- Handle dropping based on the game phase and drop zone ID ---
         if (active.data.current?.cardData?.cardType === 'Item') {
@@ -128,16 +148,19 @@ const GamePageContent = ({ initialGameState }) => {
     // If promptChoice is active, set up targeting system
     useEffect(() => {
         if (!promptChoice) return;
+        const targets = promptChoice.validTargets || promptChoice.options;
+
         // Only handle target selection prompts (not generic options)
-        if (promptChoice.choiceType === 'target' && Array.isArray(promptChoice.options)) {
+        if (promptChoice.choiceType === 'target' && Array.isArray(targets)) {
             setTargeting({
                 isTargeting: true,
-                action: promptChoice,
-                validTargets: promptChoice.options,
+                action: promptChoice, // The entire prompt object
+                validTargets: targets,   // Use the corrected list of targets
                 chosenTargets: [],
                 cancelable: true
             });
         } else {
+            // This handles cases where a prompt is not for targeting
             setTargeting({ isTargeting: false });
         }
     }, [promptChoice, setTargeting]);

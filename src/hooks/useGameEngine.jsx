@@ -3,14 +3,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
 import { useParams } from 'react-router-dom';
+import { useGameUI } from '../context/GameUIContext';
 
-export const useGameEngine = (initialGameState) => {
+export const useGameEngine = (initialGameState, callbacks = {}) => {
     const [gameState, setGameState] = useState(initialGameState);
     const [error, setError] = useState(null); // To display game errors
     const [promptChoice, setPromptChoice] = useState(null);
     const socket = useSocket();
     const { user } = useAuth();
     const { gameId } = useParams();
+    const { openInspector = () => { } } = callbacks;
+
 
     // Listener for all server updates
     useEffect(() => {
@@ -29,6 +32,19 @@ export const useGameEngine = (initialGameState) => {
         };
         const handlePromptChoice = (payload) => {
             console.log("Received game:promptChoice", payload);
+
+            if (payload.uiAction === 'open_inspector' && payload.uiActionTarget) {
+                // Find the card data for the target to inspect
+                const targetPlayer = gameState.players[payload.uiActionTarget.playerId];
+                const cardToInspect = payload.uiActionTarget.zone === 'active'
+                    ? targetPlayer.activeCard
+                    : targetPlayer.bench[payload.uiActionTarget.index];
+
+                if (cardToInspect) {
+                    openInspector(cardToInspect);
+                }
+            }
+
             setPromptChoice(payload);
         };
 
@@ -41,7 +57,7 @@ export const useGameEngine = (initialGameState) => {
             socket.off('game:error', handleGameError);
             socket.off('game:promptChoice', handlePromptChoice);
         };
-    }, [socket]);
+    }, [socket, gameState, openInspector]);
 
     // --- Unified Player Action ---
     const performAction = useCallback((type, payload = {}) => {

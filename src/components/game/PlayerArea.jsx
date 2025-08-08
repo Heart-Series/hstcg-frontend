@@ -13,12 +13,13 @@ const PlayerArea = ({
     gameState,
     activeDragData,
     promptChoice,
-    validTargets = [], // NEW: valid targets for promptChoice
 }) => {
     // Use useGameUI for UI state
-    const { selectedCard, setSelectedCard, onCardClick, onActionClick, targeting, setTargeting, isMyTurn, actionsRef } = useGameUI();
+    const { selectedCardId, onCardClick, onActionClick, targeting } = useGameUI();
     const { activeCard, bench, supportCard, attachedItems, deck, discard } = playerState;
     const playerPrefix = isOpponent ? 'opponent' : 'my';
+
+    const validTargets = promptChoice?.validTargets || targeting.action?.validTargets || [];
 
     // --- BENCH DROPPABLES & LOGIC ---
     const renderBench = () => {
@@ -61,13 +62,8 @@ const PlayerArea = ({
             const isInvalidDrop = isOver && !isValidDrop();
 
             // --- Targetable logic: use both targeting and validTargets ---
-            const isTargetable = (
-                (targeting.isTargeting && targeting.action && Array.isArray(targeting.action.validTargets) &&
-                    (targeting.action.validTargets.includes(`${isOpponent ? 'opponent' : 'my'}_bench_${index}`) || targeting.action.validTargets.includes(`${isOpponent ? 'opponent' : 'my'}_bench`)))
-                ||
-                (Array.isArray(validTargets) &&
-                    (validTargets.includes(`${isOpponent ? 'opponent' : 'my'}_bench_${index}`) || validTargets.includes(`${isOpponent ? 'opponent' : 'my'}_bench`)))
-            );
+            const isTargetable = promptChoice?.validTargets?.includes(card?.instanceId);
+
 
             return (
                 <div
@@ -84,7 +80,7 @@ const PlayerArea = ({
                             droppableId={droppableId}
                             activeDragData={activeDragData}
                             gameState={gameState}
-                            isSelected={selectedCard === droppableId}
+                            isSelected={selectedCardId === card.instanceId}
                             isTargetable={isTargetable}
                             onCardClick={(cardData, id) => onCardClick(cardData, id, isTargetable)}
                             onActionClick={onActionClick}
@@ -148,14 +144,7 @@ const PlayerArea = ({
 
     const mainRowOrder = isOpponent ? 'flex-row' : 'flex-row-reverse';
 
-    const isTargetable = () => {
-        if (!targeting.isTargeting || !targeting.action || !Array.isArray(targeting.action.validTargets)) return false;
-        const parts = `${playerPrefix}-active`.split('-');
-        const owner = parts[0];
-        const zone = parts[1];
-        const targetString = `${owner}_${zone}`;
-        return targeting.action.validTargets.includes(targetString);
-    }
+    const isActiveCardTargetable = validTargets.includes(activeCard?.instanceId);
 
     return (
         <div className="relative w-full h-full mx-auto overflow-visible">
@@ -197,9 +186,9 @@ const PlayerArea = ({
                                     droppableId={`${playerPrefix}-active`}
                                     activeDragData={activeDragData}
                                     gameState={gameState}
-                                    isSelected={selectedCard === `${playerPrefix}-active`}
-                                    isTargetable={isTargetable()}
-                                    onCardClick={(cardData, id) => onCardClick(cardData, id, isTargetable())}
+                                    isSelected={selectedCardId === activeCard.instanceId}
+                                    isTargetable={isActiveCardTargetable}
+                                    onCardClick={(cardData) => onCardClick(cardData, isActiveCardTargetable)}
                                     onActionClick={onActionClick}
                                 />
                                 : <CardSlot />
