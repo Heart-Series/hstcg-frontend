@@ -1,6 +1,6 @@
 // src/pages/GamePage.jsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 
 import { useLocation } from 'react-router-dom';
@@ -11,11 +11,11 @@ import { GameUIProvider, useGameUI } from '../context/GameUIContext';
 import GameBoard from '../components/game/GameBoard';
 import PlayerHand from '../components/game/PlayerHand';
 import Card from '../components/Card';
+import CardPileViewer from '../components/game/CardPileViewer';
 // import GameLog from '../components/game/GameLog';
 // import GameOverScreen from '../components/game/GameOverScreen'; // For the future
 
 const GamePageContent = ({ initialGameState }) => {
-    // Initialize the game engine
 
     // UI state from context
     const {
@@ -24,9 +24,12 @@ const GamePageContent = ({ initialGameState }) => {
         isHandOpen, setIsHandOpen,
         activeDragId, setActiveDragId,
         activeDragData, setActiveDragData,
-        openInspector
+        openInspector,
+        viewingCardPile,
+        openCardPileViewer, closeCardPileViewer
     } = useGameUI();
 
+    // Initialize the game engine
     const {
         gameState,
         error,
@@ -150,6 +153,12 @@ const GamePageContent = ({ initialGameState }) => {
         if (!promptChoice) return;
         const targets = promptChoice.validTargets || promptChoice.options;
 
+        if (promptChoice.choiceType === 'card_pile_selection') {
+            // Use our new context function to open the viewer
+            openCardPileViewer(promptChoice.title, promptChoice.cards);
+            return; // Stop processing
+        }
+        
         // Only handle target selection prompts (not generic options)
         if (promptChoice.choiceType === 'target' && Array.isArray(targets)) {
             setTargeting({
@@ -183,6 +192,14 @@ const GamePageContent = ({ initialGameState }) => {
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-500 p-3 rounded-lg shadow-lg z-50">
                         {error}
                     </div>
+                )}
+
+                {viewingCardPile && (
+                    <CardPileViewer
+                        title={viewingCardPile.title}
+                        cards={viewingCardPile.cards}
+                        onClose={closeCardPileViewer}
+                    />
                 )}
 
                 {/* --- Game Board (Opponent and My Player Area) --- */}

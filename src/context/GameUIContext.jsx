@@ -16,6 +16,7 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
     const [activeDragId, setActiveDragId] = useState(null);
     const [activeDragData, setActiveDragData] = useState(null);
     const [inspectorCardData, setInspectorCardData] = useState(null);
+    const [viewingCardPile, setViewingCardPile] = useState(null); // Will be null or an object { title, cards }
 
     const openInspector = (cardData) => {
         setInspectorCardData(cardData);
@@ -24,6 +25,15 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
     const closeInspector = () => {
         setInspectorCardData(null);
     };
+
+     const openCardPileViewer = (title, cards) => {
+        setViewingCardPile({ title, cards });
+    };
+
+    const closeCardPileViewer = () => {
+        setViewingCardPile(null);
+    };
+
 
     const cancelAllActions = () => {
         setSelectedCardId(null);
@@ -91,8 +101,13 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
             setTargeting({ isTargeting: true, action: action });
             // selectedCardId remains set, so we know who is attacking.
         } else {
-            // ... non-targeted actions like 'activate' ...
-            setSelectedCardId(null);
+
+            if (action.type == 'activate') {
+                actions.activateBenchCard(action.payload?.benchIndex)
+            }
+
+            // The action has been sent, so we clear all UI states.
+            cancelAllActions();
         }
     };
 
@@ -108,7 +123,10 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
             cancelAllActions,
             inspectorCardData,
             openInspector,
-            closeInspector
+            closeInspector,
+            viewingCardPile,
+            openCardPileViewer,
+            closeCardPileViewer
         }}>
             {children}
         </GameUIContext.Provider>

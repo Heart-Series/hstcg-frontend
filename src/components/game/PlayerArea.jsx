@@ -5,6 +5,7 @@ import CardSlot from './CardSlot';
 import DeckPile from './DeckPile';
 import { useDroppable } from '@dnd-kit/core';
 import { useGameUI } from '../../context/GameUIContext';
+import Card from '../Card';
 
 const PlayerArea = ({
     playerState,
@@ -15,11 +16,18 @@ const PlayerArea = ({
     promptChoice,
 }) => {
     // Use useGameUI for UI state
-    const { selectedCardId, onCardClick, onActionClick, targeting } = useGameUI();
+    const { selectedCardId, onCardClick, onActionClick, targeting, openInspector, openCardPileViewer } = useGameUI();
     const { activeCard, bench, supportCard, attachedItems, deck, discard } = playerState;
     const playerPrefix = isOpponent ? 'opponent' : 'my';
 
     const validTargets = promptChoice?.validTargets || targeting.action?.validTargets || [];
+
+    const handleDiscardClick = () => {
+        // Only open if there are cards to see
+        if (discard && discard.length > 0) {
+            openCardPileViewer(`${playerState.username}'s Discard Pile`, discard);
+        }
+    };
 
     // --- BENCH DROPPABLES & LOGIC ---
     const renderBench = () => {
@@ -61,8 +69,10 @@ const PlayerArea = ({
             const canDrop = isOver && isValidDrop();
             const isInvalidDrop = isOver && !isValidDrop();
 
+            console.log(`Targetable`)
+            console.log(`Card: ${card?.instanceId}, Valid Targets: ${validTargets}`);
             // --- Targetable logic: use both targeting and validTargets ---
-            const isTargetable = promptChoice?.validTargets?.includes(card?.instanceId);
+            const isTargetable = validTargets.includes(card?.instanceId);
 
 
             return (
@@ -198,18 +208,24 @@ const PlayerArea = ({
                         {/* Support Card - positioned to the right */}
                         <div
                             ref={setSupportSlotRef}
+                            onClick={() => supportCard && openInspector(supportCard)}
                             className={`w-32 aspect-[3/4] rounded-lg transition-all duration-150
-                                ${canDropOnSupport ? 'bg-green-500/40 scale-105' : ''}
-                                ${isInvalidDropOnSupport ? 'bg-red-500/40' : ''}
-                            `}
+        ${supportCard ? 'cursor-pointer' : ''} 
+        ${canDropOnSupport ? 'bg-green-500/40 scale-105' : ''}
+        ${isInvalidDropOnSupport ? 'bg-red-500/40' : ''}
+    `}
                         >
-                            {supportCard ? <CardOnField cardData={supportCard} /> : <CardSlot />}
+                            {supportCard ? <Card cardData={supportCard} /> : <CardSlot />}
                         </div>
 
                     </div>
                 </div>
-                <div className="content-center">
-                    <DeckPile type="Discard" count={discard.length} cardData={discard[0]} />
+                 <div className="content-center" onClick={handleDiscardClick}>
+                    <DeckPile 
+                        type="Discard" 
+                        count={discard.length} 
+                        cardData={discard[0]} 
+                    />
                 </div>
             </div>
         </div>
