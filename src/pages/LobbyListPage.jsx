@@ -55,14 +55,16 @@ const LobbyListPage = () => {
 
     const handleCreateDebugLobby = async () => {
         // --- CONFIGURE YOUR TEST HERE ---
-        const config = {
-          myDeckId: "6878cc6059a42dd98c826468", // <-- ⚠️ CHANGE TO YOUR DECK ID
-          opponentDeckId: "687b510ea0c87ba79a2555db", // <-- ⚠️ CHANGE TO OPPONENT DECK ID
-          startFirst: true,
-          // List the card IDs you want on top of your deck.
-          // The first card in this list will be the first card you draw.
-          stackMyDeck: ["item-spyglass", "player-invalidw-th-rank1"],
-        };
+        // const config = {
+        //   myDeckId: "6878cc6059a42dd98c826468", // <-- ⚠️ CHANGE TO YOUR DECK ID
+        //   opponentDeckId: "687b510ea0c87ba79a2555db", // <-- ⚠️ CHANGE TO OPPONENT DECK ID
+        //   startFirst: true,
+        //   // List the card IDs you want on top of your deck.
+        //   // The first card in this list will be the first card you draw.
+        //   stackMyDeck: ["th-home"],
+        // };
+
+        const config = {}
 
         try {
             const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/lobbies/debug/create`, {

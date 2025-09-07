@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
 import { useParams } from 'react-router-dom';
-import { useGameUI } from '../context/GameUIContext';
 
 export const useGameEngine = (initialGameState, callbacks = {}) => {
     const [gameState, setGameState] = useState(initialGameState);
@@ -12,7 +11,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
     const socket = useSocket();
     const { user } = useAuth();
     const { gameId } = useParams();
-    const { openInspector = () => { } } = callbacks;
+    const { openInspector = () => { }, showToast = () => { } } = callbacks;
 
 
     // Listener for all server updates
@@ -48,16 +47,25 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
             setPromptChoice(payload);
         };
 
+        const handleEffectActivated = (payload) => {
+            console.log("Received game:effectActivated", payload);
+            if (payload.message) {
+                showToast(payload.message);
+            }
+        };
+
         socket.on('game:updated', handleGameUpdate);
         socket.on('game:error', handleGameError);
         socket.on('game:promptChoice', handlePromptChoice);
+        socket.on('game:effectActivated', handleEffectActivated);
 
         return () => {
             socket.off('game:updated', handleGameUpdate);
             socket.off('game:error', handleGameError);
             socket.off('game:promptChoice', handlePromptChoice);
+            socket.off('game:effectActivated', handleEffectActivated);
         };
-    }, [socket, gameState, openInspector]);
+    }, [socket, gameState, openInspector, showToast]);
 
     // --- Unified Player Action ---
     const performAction = useCallback((type, payload = {}) => {

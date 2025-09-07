@@ -26,7 +26,8 @@ const GamePageContent = ({ initialGameState }) => {
         activeDragData, setActiveDragData,
         openInspector,
         viewingCardPile,
-        openCardPileViewer, closeCardPileViewer
+        openCardPileViewer, closeCardPileViewer,
+        showToast
     } = useGameUI();
 
     // Initialize the game engine
@@ -39,7 +40,7 @@ const GamePageContent = ({ initialGameState }) => {
         canPerformAction,
         actions,
         promptChoice,
-    } = useGameEngine(initialGameState, { openInspector });
+    } = useGameEngine(initialGameState, { openInspector, showToast });
 
     const handleDragStart = (event) => {
         const { active } = event;

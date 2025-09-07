@@ -1,5 +1,7 @@
 // src/context/GameUIContext.jsx
 import React, { createContext, useContext, useState } from 'react';
+import { useCallback } from 'react';
+import toast from 'react-hot-toast';
 
 const GameUIContext = createContext();
 
@@ -26,7 +28,7 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
         setInspectorCardData(null);
     };
 
-     const openCardPileViewer = (title, cards) => {
+    const openCardPileViewer = (title, cards) => {
         setViewingCardPile({ title, cards });
     };
 
@@ -34,11 +36,16 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
         setViewingCardPile(null);
     };
 
+    const showToast = useCallback((message, options = {}) => {
+        toast(message, options);
+    }, []);
+
 
     const cancelAllActions = () => {
         setSelectedCardId(null);
         setTargeting({ isTargeting: false, action: null });
     };
+
 
     // Context-aware card click handler
     const onCardClick = (clickedCard, isTargetable) => {
@@ -126,7 +133,8 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
             closeInspector,
             viewingCardPile,
             openCardPileViewer,
-            closeCardPileViewer
+            closeCardPileViewer,
+            showToast
         }}>
             {children}
         </GameUIContext.Provider>

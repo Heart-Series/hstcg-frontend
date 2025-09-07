@@ -16,8 +16,10 @@ const CardOnField = ({ cardData, isSelected, isTargetable, onCardClick, onAction
                   
                 ${isTargetable ? 'ring-4 ring-yellow-400 animate-pulse' : ''} 
                 ${isSelected ? 'ring-4 ring-blue-500' : ''}
-                ${cardData.isCancelled ? 'grayscale opacity-70' : ''}
             `}
+
+            // ${cardData.isCancelled ? 'grayscale opacity-70' : ''}
+
         >
             <Card cardData={cardData} />
 

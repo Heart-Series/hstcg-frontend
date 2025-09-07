@@ -12,7 +12,10 @@ import DeckBuilder from './pages/DeckBuilder';
 import LobbyListPage from './pages/LobbyListPage';
 import LobbyPage from './pages/LobbyPage';      
 import GamePage     from './pages/GamePage';        
+
 import ErrorBoundary from './components/ErrorBoundary';
+
+import { Toaster } from 'react-hot-toast';
 
 // A simple component for the home page
 const HomePage = () => (
@@ -63,6 +66,18 @@ function App() {
     return (
         // Using HashRouter is the easiest way to ensure compatibility with GitHub Pages
         <HashRouter>
+              <Toaster
+                position="top-center"
+                toastOptions={{
+                    // Define default options
+                    className: '',
+                    duration: 5000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                }}
+            />
             <nav style={navStyle}>
                 <Link to="/" style={linkStyle}>Home</Link>
                 {/* <Link to="/library" style={linkStyle}>Card Library</Link> */}

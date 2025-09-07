@@ -26,6 +26,33 @@ const InspectorPanel = () => {
 
     const isHostCardSelectable = promptChoice?.phase === 2 && promptChoice.options?.includes(inspectorCardData.instanceId);
 
+    const renderStatusEffects = () => {
+        if (!inspectorCardData.statusEffects || inspectorCardData.statusEffects.length === 0) {
+            return (
+                <div className="text-gray-500 italic">No active effects.</div>
+            );
+        }
+
+        return (
+            <ul className="space-y-2">
+                {inspectorCardData.statusEffects.map((status, index) => (
+                    <li key={index} className="bg-gray-700 p-2 rounded-md text-sm">
+                        <p className="font-bold text-yellow-400">{status.name}</p>
+                        <p className="text-gray-300">
+                            {/* We can customize the display based on the effect type */}
+                            {status.type === 'DAMAGE_MODIFIER' && `Modifies outgoing damage by ${status.value}.`}
+
+                            {status.type === 'DAMAGE_REDUCTION' && `Reduces incoming damage by ${status.value * 100}%.`}
+                            {/* Add more descriptions for other status types here */}
+                        </p>
+                        <p className="text-gray-400 text-xs">Turns remaining: {status.duration}</p>
+                    </li>
+                ))}
+            </ul>
+        );
+    };
+
+
     return (
         // The semi-transparent background overlay
         <div
@@ -54,6 +81,11 @@ const InspectorPanel = () => {
                     <div className="mt-4 text-sm text-gray-400">
                         <p>HP: {inspectorCardData.hp}</p>
                         {/* Add any other stats you want to show here */}
+                    </div>
+
+                    <div className="mt-4">
+                        <h3 className="text-lg font-bold text-gray-300 mb-2">Active Effects</h3>
+                        {renderStatusEffects()}
                     </div>
                 </div>
 
