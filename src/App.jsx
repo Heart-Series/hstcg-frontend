@@ -12,6 +12,7 @@ import DeckBuilder from './pages/DeckBuilder';
 import LobbyListPage from './pages/LobbyListPage';
 import LobbyPage from './pages/LobbyPage';      
 import GamePage     from './pages/GamePage';        
+import ErrorBoundary from './components/ErrorBoundary';
 
 // A simple component for the home page
 const HomePage = () => (
@@ -91,7 +92,7 @@ function App() {
                     <Route path="/decks/:deckId" element={<DeckBuilder />} />
                     <Route path="/lobbies" element={<LobbyListPage />} />
                     <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
-                    <Route path="/game/:gameId" element={<GamePage />} />
+                    <Route path="/game/:gameId" element={<ErrorBoundary><GamePage /></ErrorBoundary>} />
                     {/* You will add more routes here for other pages */}
                     {/* e.g., <Route path="/collection" element={<MyCollection />} /> */}
                 </Routes>

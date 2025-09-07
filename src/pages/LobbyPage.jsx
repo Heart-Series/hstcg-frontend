@@ -65,7 +65,7 @@ const LobbyPage = () => {
         return () => {
             if (socket && lobbyId) {
                 setLobbyData(null);
-                socket.emit('lobby:join', lobbyId.toUpperCase());
+                // socket.emit('lobby:join', lobbyId.toUpperCase());
             }
         };
     }, [socket, lobbyId]); // This effect is also stable.
