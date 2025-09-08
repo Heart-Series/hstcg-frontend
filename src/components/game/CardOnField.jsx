@@ -18,7 +18,7 @@ const CardOnField = ({ cardData, isSelected, isTargetable, onCardClick, onAction
                 ${isSelected ? 'ring-4 ring-blue-500' : ''}
             `}
 
-            // ${cardData.isCancelled ? 'grayscale opacity-70' : ''}
+        // ${cardData.isCancelled ? 'grayscale opacity-70' : ''}
 
         >
             <Card cardData={cardData} />
@@ -44,7 +44,15 @@ const CardOnField = ({ cardData, isSelected, isTargetable, onCardClick, onAction
                             <li key={action.type}>
                                 <button
                                     onClick={() => onActionClick(action, cardData)}
-                                    className="w-full text-left px-3 py-2 text-sm text-gray-800 bg-gray-100 hover:bg-blue-500 hover:text-white rounded-md transition-colors"
+                                    disabled={action.disabled}
+                                    title={action.disabled ? action.disabledMessage : ''}
+                                    className={`
+                                        w-full text-left px-3 py-2 text-sm text-gray-800 rounded-md transition-colors
+                                        ${action.disabled
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed' // Style for disabled
+                                            : 'bg-gray-100 hover:bg-blue-500 hover:text-white' // Style for enabled
+                                        }
+                                    `}
                                 >
                                     {action.label}
                                 </button>
