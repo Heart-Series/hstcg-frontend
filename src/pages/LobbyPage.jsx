@@ -35,12 +35,17 @@ const LobbyPage = () => {
         };
         const handleGameStarting = (gameState) => {
             console.log('Game starting!', gameState);
-            if (lobbyId) navigate(`/game/${lobbyId}`, { state: { initialGameState: gameState } });
+            if (lobbyId) {
+                console.log('Navigating to game page...');
+                navigate(`/game/${lobbyId}`, { state: { initialGameState: gameState } });
+                console.log('Navigate called');
+            }
         };
 
         socket.on('lobby:updated', handleLobbyUpdated);
         socket.on('lobby:error', handleLobbyError);
         socket.on('game:starting', handleGameStarting);
+        console.log('Registered game:starting listener');
 
         // Cleanup function runs only when the component unmounts for good
         return () => {

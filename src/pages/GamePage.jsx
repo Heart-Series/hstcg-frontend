@@ -12,6 +12,8 @@ import GameBoard from '../components/game/GameBoard';
 import PlayerHand from '../components/game/PlayerHand';
 import Card from '../components/Card';
 import CardPileViewer from '../components/game/CardPileViewer';
+import PromptDisplay from '../components/game/PromptDisplay';
+import { useMemo } from 'react';
 // import GameLog from '../components/game/GameLog';
 // import GameOverScreen from '../components/game/GameOverScreen'; // For the future
 
@@ -40,7 +42,7 @@ const GamePageContent = ({ initialGameState }) => {
         canPerformAction,
         actions,
         promptChoice,
-    } = useGameEngine(initialGameState, { openInspector, showToast });
+    } = useGameEngine(initialGameState, {});
 
     const handleDragStart = (event) => {
         const { active } = event;
@@ -151,29 +153,64 @@ const GamePageContent = ({ initialGameState }) => {
     // --- PromptChoice Integration ---
     // If promptChoice is active, set up targeting system
     useEffect(() => {
-        if (!promptChoice) return;
-        const targets = promptChoice.validTargets || promptChoice.options;
-
-        if (promptChoice.choiceType === 'card_pile_selection') {
-            // Use our new context function to open the viewer
-            openCardPileViewer(promptChoice.title, promptChoice.cards);
-            return; // Stop processing
+        if (!promptChoice) {
+            // When a prompt is cleared, ensure targeting is also cleared.
+            if (targeting.isTargeting) {
+                setTargeting(prev => ({ ...prev, isTargeting: false }));
+            }
+            return;
         }
-        
-        // Only handle target selection prompts (not generic options)
-        if (promptChoice.choiceType === 'target' && Array.isArray(targets)) {
+
+        // Case 1: Hijack Action
+        // if (promptChoice.hijackAction) {
+        //     setTargeting({
+        //         isTargeting: true,
+        //         action: promptChoice.newAction,
+        //         hijackState: promptChoice.hijackState,
+        //         validTargets: promptChoice.newAction.validTargets || [],
+        //     });
+        //     return;
+        // }
+
+        // Case 2: Open Inspector
+        if (promptChoice.uiAction === 'open_inspector' && promptChoice.uiActionTarget) {
+            const player = promptChoice.uiActionTarget.playerId === myPlayerState.socketId ? myPlayerState : opponentState;
+            const cardToInspect = promptChoice.uiActionTarget.zone === 'active'
+                ? player.activeCard
+                : player.bench[promptChoice.uiActionTarget.index];
+            if (cardToInspect) openInspector(cardToInspect);
+        }
+
+        // Case 3: Show a card pile
+        if (promptChoice.choiceType === 'card_pile_selection') {
+            openCardPileViewer(promptChoice.title, promptChoice.cards);
+            setTargeting({ isTargeting: false });
+            return;
+        }
+
+        // Case 4: Standard board targeting
+        if (promptChoice.choiceType === 'target') {
             setTargeting({
                 isTargeting: true,
-                action: promptChoice, // The entire prompt object
-                validTargets: targets,   // Use the corrected list of targets
-                chosenTargets: [],
-                cancelable: true
+                action: promptChoice,
+                validTargets: promptChoice.validTargets || [],
             });
-        } else {
-            // This handles cases where a prompt is not for targeting
-            setTargeting({ isTargeting: false });
         }
-    }, [promptChoice, setTargeting]);
+
+    }, [promptChoice])
+
+     const promptMessage = useMemo(() => {
+        // --- THIS IS THE IMPORTANT PART ---
+        // When we enter targeting mode for the copied attack, this will read the title
+        if (targeting.isTargeting && targeting.action?.title) {
+            return targeting.action.title;
+        }
+        // This is a fallback for the first step of Revenge
+        if (promptChoice?.title) {
+            return promptChoice.title;
+        }
+        return null;
+    }, [targeting, promptChoice]);
 
     // --- Debugging: Log targeting state ---
     useEffect(() => {
@@ -202,6 +239,8 @@ const GamePageContent = ({ initialGameState }) => {
                         onClose={closeCardPileViewer}
                     />
                 )}
+
+                <PromptDisplay message={promptMessage} />
 
                 {/* --- Game Board (Opponent and My Player Area) --- */}
                 <div

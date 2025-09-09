@@ -11,11 +11,12 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
     const socket = useSocket();
     const { user } = useAuth();
     const { gameId } = useParams();
-    const { openInspector = () => { }, showToast = () => { } } = callbacks;
+     const { showToast = () => {} } = callbacks;
 
 
     // Listener for all server updates
     useEffect(() => {
+        console.log("Setting up game engine listeners");
         if (!socket) return;
 
         const handleGameUpdate = (newGameState) => {
@@ -32,19 +33,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
         const handlePromptChoice = (payload) => {
             console.log("Received game:promptChoice", payload);
 
-            if (payload.uiAction === 'open_inspector' && payload.uiActionTarget) {
-                // Find the card data for the target to inspect
-                const targetPlayer = gameState.players[payload.uiActionTarget.playerId];
-                const cardToInspect = payload.uiActionTarget.zone === 'active'
-                    ? targetPlayer.activeCard
-                    : targetPlayer.bench[payload.uiActionTarget.index];
-
-                if (cardToInspect) {
-                    openInspector(cardToInspect);
-                }
-            }
-
-            setPromptChoice(payload);
+           setPromptChoice(payload);
         };
 
         const handleEffectActivated = (payload) => {
@@ -65,7 +54,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
             socket.off('game:promptChoice', handlePromptChoice);
             socket.off('game:effectActivated', handleEffectActivated);
         };
-    }, [socket, gameState, openInspector, showToast]);
+    }, [socket, gameState, showToast]);
 
     // --- Unified Player Action ---
     const performAction = useCallback((type, payload = {}) => {
@@ -100,9 +89,12 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
         performAction('playItemCard', { instanceId, target, phase, choosingState });
     }, [performAction]);
 
+    const resolveAbilityStep = useCallback((sourceInstanceId, target, phase = 1, choosingState = null) => {
+        performAction('resolveAbilityStep', { sourceInstanceId, target, phase, choosingState });
+    }, [performAction]);
 
-    const performAttack = useCallback((attackType, target) => {
-        performAction('performAttack', { attackType, target });
+    const performAttack = useCallback((attackType, target,) => {
+        performAction('performAttack', { attackType, target});
     }, [performAction]);
 
     const retreatActiveCard = useCallback((benchIndex) => {
@@ -140,6 +132,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
             playSupportCard,
             playItemCard,
             performAttack,
+            resolveAbilityStep,
             retreatActiveCard,
             activateBenchCard,
         },

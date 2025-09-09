@@ -43,7 +43,7 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
 
     const cancelAllActions = () => {
         setSelectedCardId(null);
-        setTargeting({ isTargeting: false, action: null });
+        setTargeting({ isTargeting: false, action: null, });
     };
 
 
@@ -57,44 +57,52 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
             return;
         }
 
-        console.log(targeting.validTargets, clickedInstanceId);
+        // Case 1: We are in targeting mode to resolve an action.
+        if (targeting.isTargeting && isTargetable) {
 
-        // Case 1: Resolving a prompt (from an item or attack)
-        if (targeting.isTargeting && (targeting.validTargets?.includes(clickedInstanceId) || targeting.action.validTargets?.includes(clickedInstanceId))) {
-            // We are targeting, and this card is a valid choice.
-
-            // Is this target for a multi-step item effect? (like Piston phase 3)
+            // SUB-CASE A: We are resolving a multi-step prompt (from an ability OR an item).
             if (promptChoice) {
-                actions.playItemCard(
-                    null, // No new card instanceId from hand
-                    clickedInstanceId, // The instanceId of the card we just clicked
-                    promptChoice.phase,
-                    promptChoice.choosingState
-                );
+                // Check if it's a prompt from our new ability system.
+                // The 'sourceInstanceId' is a reliable flag we set in the choosingState.
+                console.log(`Prompt Choice Choosing State : ${promptChoice.choosingState?.sourceInstanceId}`)
+                // console.log(`Prompt Choice : ${JSON.stringify(promptChoice)}`)
+                if (promptChoice.choosingState?.sourceInstanceId) {
+                    console.log('[FRONTEND] Resolving ability. Card to copy ID:', clickedInstanceId);
+                    actions.resolveAbilityStep(
+                        promptChoice.choosingState.sourceInstanceId,
+                        clickedInstanceId, // The card the user just clicked
+                        promptChoice.phase,
+                        promptChoice.choosingState
+                    );
+                }
+                // Otherwise, assume it's a prompt from an item card.
+                else {
+                    actions.playItemCard(
+                        null,
+                        clickedInstanceId,
+                        promptChoice.phase,
+                        promptChoice.choosingState
+                    );
+                }
             }
-            // Is this target for a standard attack or retreat?
+            // SUB-CASE B: We are resolving a standard, single-step attack or retreat.
             else if (targeting.action) {
                 const actionType = targeting.action.type;
                 if (actionType === 'retreat') {
                     const benchIndex = myPlayerState.bench.findIndex(c => c && c.instanceId === clickedInstanceId);
                     if (benchIndex > -1) actions.retreatActiveCard(benchIndex);
                 } else if (actionType === 'basic_attack' || actionType === 'special_attack') {
-                    actions.performAttack(actionType, clickedInstanceId);
+                    actions.performAttack(targeting.action.type, clickedInstanceId);
                 }
             }
 
-            // Action sent, so we clear all selections and targeting states.
+            // Action was sent, so clean up the UI.
             cancelAllActions();
             return;
         }
 
-        // Case 2: Selecting a new card
-        if (clickedInstanceId === selectedCardId) {
-            cancelAllActions();
-        } else {
-            // Select a new card
-            setSelectedCardId(clickedInstanceId);
-        }
+        // Case 2: We are not in targeting mode, so just select the card.
+        setSelectedCardId(clickedInstanceId);
     };
 
     // onActionClick now just sets targeting state.
@@ -104,8 +112,27 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
             setSelectedCardId(null);
             return;
         }
+
+        if (action.isMultiPhase) {
+            console.log(`Starting multi-phase action: ${action.type}`);
+            // This is a complex ability like Revenge. Its first step needs an initial target.
+            // Even though Revenge ignores this target, the system needs one to start.
+            const initialTarget = opponentState?.activeCard;
+            if (initialTarget) {
+                // Call our new action to START the ability chain.
+                // We pass the source (Satonix) and an initial target.
+                actions.resolveAbilityStep(sourceCardData.instanceId, initialTarget.instanceId, 1, null);
+                cancelAllActions(); // Clean up the UI
+            } else {
+                // Handle case where there's no opponent active card
+                alert("Cannot use this ability without an active opponent.");
+            }
+            return; // IMPORTANT: Stop processing here.
+        }
+
+
         if (action.requiresTarget) {
-            setTargeting({ isTargeting: true, action: action });
+            setTargeting({ isTargeting: true, action: action, });
             // selectedCardId remains set, so we know who is attacking.
         } else {
 

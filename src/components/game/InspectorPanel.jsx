@@ -40,9 +40,12 @@ const InspectorPanel = () => {
                         <p className="font-bold text-yellow-400">{status.name}</p>
                         <p className="text-gray-300">
                             {/* We can customize the display based on the effect type */}
+                            {status.type === 'BORROWED_PASSIVE' && `This card is temporarily using another card's passive ability.`}
+
                             {status.type === 'DAMAGE_MODIFIER' && `Modifies outgoing damage by ${status.value}.`}
                             {status.type === 'DAMAGE_REDUCTION' && `Reduces incoming damage by ${status.value * 100}%.`}
-                            {status.type === 'CANNOT_ATTACK' && `This card cannot attack.`}
+                            {status.type === 'CANNOT_ATTACK' && `This card/user cannot attack.`}
+                            {status.type === 'CANNOT_RETREAT' && `This card cannot retreat.`}
                             {status.type === 'DELAYED_DAMAGE_ACTIVE' && `The active card will take ${status.value} damage at the end of the turn.`}
                             {status.type === 'DELAYED_DAMAGE' && `This card will take ${status.value} damage at the end of the turn.`}
                             {/* Add more descriptions for other status types here */}
