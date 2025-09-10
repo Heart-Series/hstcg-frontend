@@ -11,7 +11,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
     const socket = useSocket();
     const { user } = useAuth();
     const { gameId } = useParams();
-     const { showToast = () => {} } = callbacks;
+    const { showToast = () => { }, setResolutionState = () => { } } = callbacks;
 
 
     // Listener for all server updates
@@ -22,6 +22,10 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
         const handleGameUpdate = (newGameState) => {
             console.log("Received game:updated", newGameState);
             setGameState(newGameState);
+            setResolutionState({
+                isActive: newGameState.phase === 'action_resolution_phase',
+                actions: newGameState.resolutionActions || []
+            });
             setPromptChoice(null); // Clear any prompt on game update
         };
         const handleGameError = (errorMessage) => {
@@ -33,7 +37,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
         const handlePromptChoice = (payload) => {
             console.log("Received game:promptChoice", payload);
 
-           setPromptChoice(payload);
+            setPromptChoice(payload);
         };
 
         const handleEffectActivated = (payload) => {
@@ -42,6 +46,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
                 showToast(payload.message);
             }
         };
+
 
         socket.on('game:updated', handleGameUpdate);
         socket.on('game:error', handleGameError);
@@ -69,6 +74,16 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
         performAction('playCardFromHand', { cardId, target });
     }, [performAction]);
 
+    const performResolutionAction = useCallback((action, target) => {
+        // We need to merge the action data from the backend with the target from the frontend
+        const payload = { ...action, target };
+        performAction('performResolutionAction', payload);
+    }, [performAction]);
+
+    const resolvePhase = useCallback(() => {
+        performAction('resolvePhase');
+    }, [performAction]);
+
     const endTurn = useCallback(() => {
         performAction('endTurn');
     }, [performAction]);
@@ -94,7 +109,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
     }, [performAction]);
 
     const performAttack = useCallback((attackType, target,) => {
-        performAction('performAttack', { attackType, target});
+        performAction('performAttack', { attackType, target });
     }, [performAction]);
 
     const retreatActiveCard = useCallback((benchIndex) => {
@@ -110,7 +125,9 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
     const myPlayerState = gameState?.players[socket?.id];
     const opponentState = Object.entries(gameState?.players || {})
         .find(([id]) => id !== socket?.id)?.[1];
-    const isMyTurn = gameState?.phase === 'main_phase' && gameState?.activePlayerId === socket?.id;
+    const isMyTurn = (gameState?.phase === 'main_phase' && gameState?.activePlayerId === socket?.id) ||
+        (gameState?.phase === 'action_resolution_phase' && gameState?.playerInResolution === socket?.id);
+
 
     // A new variable to determine if the player can interact with their hand.
     const canPerformAction =
@@ -135,6 +152,8 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
             resolveAbilityStep,
             retreatActiveCard,
             activateBenchCard,
+            performResolutionAction,
+            resolvePhase,
         },
     };
 };

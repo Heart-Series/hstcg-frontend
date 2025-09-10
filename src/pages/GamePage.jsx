@@ -29,6 +29,7 @@ const GamePageContent = ({ initialGameState }) => {
         openInspector,
         viewingCardPile,
         openCardPileViewer, closeCardPileViewer,
+        resolutionState, setResolutionState,
         showToast
     } = useGameUI();
 
@@ -42,7 +43,7 @@ const GamePageContent = ({ initialGameState }) => {
         canPerformAction,
         actions,
         promptChoice,
-    } = useGameEngine(initialGameState, {});
+    } = useGameEngine(initialGameState, { showToast, setResolutionState });
 
     const handleDragStart = (event) => {
         const { active } = event;
@@ -199,8 +200,10 @@ const GamePageContent = ({ initialGameState }) => {
 
     }, [promptChoice])
 
-     const promptMessage = useMemo(() => {
-        // --- THIS IS THE IMPORTANT PART ---
+    const promptMessage = useMemo(() => {
+        if (resolutionState.isActive) {
+            return "End-of-Turn Actions";
+        }
         // When we enter targeting mode for the copied attack, this will read the title
         if (targeting.isTargeting && targeting.action?.title) {
             return targeting.action.title;
@@ -210,12 +213,14 @@ const GamePageContent = ({ initialGameState }) => {
             return promptChoice.title;
         }
         return null;
-    }, [targeting, promptChoice]);
+    }, [resolutionState.isActive, targeting, promptChoice]);
 
     // --- Debugging: Log targeting state ---
     useEffect(() => {
         console.log('Targeting State:', targeting);
     }, [targeting]);
+
+
 
 
     return (

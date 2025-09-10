@@ -19,6 +19,10 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
     const [activeDragData, setActiveDragData] = useState(null);
     const [inspectorCardData, setInspectorCardData] = useState(null);
     const [viewingCardPile, setViewingCardPile] = useState(null); // Will be null or an object { title, cards }
+    const [resolutionState, setResolutionState] = useState({
+        isActive: false,
+        actions: []
+    });
 
     const openInspector = (cardData) => {
         setInspectorCardData(cardData);
@@ -60,45 +64,48 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
         // Case 1: We are in targeting mode to resolve an action.
         if (targeting.isTargeting && isTargetable) {
 
-            // SUB-CASE A: We are resolving a multi-step prompt (from an ability OR an item).
-            if (promptChoice) {
-                // Check if it's a prompt from our new ability system.
-                // The 'sourceInstanceId' is a reliable flag we set in the choosingState.
-                console.log(`Prompt Choice Choosing State : ${promptChoice.choosingState?.sourceInstanceId}`)
-                // console.log(`Prompt Choice : ${JSON.stringify(promptChoice)}`)
-                if (promptChoice.choosingState?.sourceInstanceId) {
-                    console.log('[FRONTEND] Resolving ability. Card to copy ID:', clickedInstanceId);
-                    actions.resolveAbilityStep(
-                        promptChoice.choosingState.sourceInstanceId,
-                        clickedInstanceId, // The card the user just clicked
-                        promptChoice.phase,
-                        promptChoice.choosingState
-                    );
+            if (targeting.isTargeting && isTargetable) {
+
+                // SUB-CASE A: Are we resolving a special end-of-turn attack?
+                // This check is the most specific, so it comes first.
+                if (targeting.action.sourceCardId) {
+                    actions.performResolutionAction(targeting.action, clickedInstanceId);
                 }
-                // Otherwise, assume it's a prompt from an item card.
-                else {
-                    actions.playItemCard(
-                        null,
-                        clickedInstanceId,
-                        promptChoice.phase,
-                        promptChoice.choosingState
-                    );
+                // SUB-CASE B: ELSE, are we resolving a multi-step prompt from an ability or item?
+                else if (promptChoice) {
+                    if (promptChoice.choosingState?.sourceInstanceId) {
+                        actions.resolveAbilityStep(
+                            promptChoice.choosingState.sourceInstanceId,
+                            clickedInstanceId,
+                            promptChoice.phase,
+                            promptChoice.choosingState
+                        );
+                    }
+                    else {
+                        actions.playItemCard(
+                            null,
+                            clickedInstanceId,
+                            promptChoice.phase,
+                            promptChoice.choosingState
+                        );
+                    }
                 }
-            }
-            // SUB-CASE B: We are resolving a standard, single-step attack or retreat.
-            else if (targeting.action) {
-                const actionType = targeting.action.type;
-                if (actionType === 'retreat') {
-                    const benchIndex = myPlayerState.bench.findIndex(c => c && c.instanceId === clickedInstanceId);
-                    if (benchIndex > -1) actions.retreatActiveCard(benchIndex);
-                } else if (actionType === 'basic_attack' || actionType === 'special_attack') {
-                    actions.performAttack(targeting.action.type, clickedInstanceId);
+                // SUB-CASE C: ELSE, it must be a standard, single-step action.
+                else if (targeting.action) {
+                    const actionType = targeting.action.type;
+                    if (actionType === 'retreat') {
+                        const benchIndex = myPlayerState.bench.findIndex(c => c && c.instanceId === clickedInstanceId);
+                        if (benchIndex > -1) actions.retreatActiveCard(benchIndex);
+                    } else if (actionType === 'basic_attack' || actionType === 'special_attack') {
+                        actions.performAttack(targeting.action.type, clickedInstanceId);
+                    }
                 }
+
+                // After any of the above actions are sent, clean up the UI.
+                cancelAllActions();
+                return;
             }
 
-            // Action was sent, so clean up the UI.
-            cancelAllActions();
-            return;
         }
 
         // Case 2: We are not in targeting mode, so just select the card.
@@ -110,6 +117,16 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
         if (action.type === 'view') {
             openInspector(sourceCardData);
             setSelectedCardId(null);
+            return;
+        }
+
+        if (resolutionState.isActive && action.sourceCardId) {
+            setTargeting({
+                isTargeting: true,
+                action: action, // This is a resolution action
+                validTargets: action.validTargets || [],
+            });
+            // Keep the card selected
             return;
         }
 
@@ -156,12 +173,11 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
             onActionClick,
             cancelAllActions,
             inspectorCardData,
-            openInspector,
-            closeInspector,
+            openInspector, closeInspector,
             viewingCardPile,
-            openCardPileViewer,
-            closeCardPileViewer,
-            showToast
+            openCardPileViewer, closeCardPileViewer,
+            showToast,
+            resolutionState, setResolutionState
         }}>
             {children}
         </GameUIContext.Provider>

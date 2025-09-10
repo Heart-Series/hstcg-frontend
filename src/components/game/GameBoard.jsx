@@ -6,7 +6,7 @@ import { useGameUI } from '../../context/GameUIContext';
 import InspectorPanel from './InspectorPanel';
 
 const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState, activeDragData, promptChoice }) => {
-    const { selectedCard, onCardClick, onActionClick, targeting, cancelAllActions } = useGameUI();
+    const { selectedCard, onCardClick, onActionClick, targeting, cancelAllActions, resolutionState, setResolutionState } = useGameUI();
 
     // --- Highlight valid targets if promptChoice is active ---
     const getTargetingForPrompt = () => {
@@ -16,6 +16,18 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
         return [];
     };
     const validTargets = getTargetingForPrompt();
+
+    const handleTurnButtonClick = (e) => {
+        // Stop the click from bubbling up and cancelling actions
+        e.stopPropagation();
+
+        // Decide which action to call based on the phase
+        if (resolutionState.isActive) {
+            actions.resolvePhase();
+        } else {
+            actions.endTurn();
+        }
+    };
 
     // Pass validTargets to PlayerArea for contextual highlighting
     return (
@@ -39,9 +51,9 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
                 {isMyTurn && (
                     <button
                         className="absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-2 bg-red-600 text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-all duration-300 z-40"
-                        onClick={actions.endTurn}
+                        onClick={handleTurnButtonClick}
                     >
-                        End Turn
+                        {resolutionState.isActive ? 'Finish Turn' : 'End Turn'}
                     </button>
                 )}
             </div>

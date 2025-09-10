@@ -69,8 +69,8 @@ const PlayerArea = ({
             const canDrop = isOver && isValidDrop();
             const isInvalidDrop = isOver && !isValidDrop();
 
-            console.log(`Targetable`)
-            console.log(`Card: ${card?.instanceId}, Valid Targets: ${validTargets}`);
+            // console.log(`Targetable`)
+            // console.log(`Card: ${card?.instanceId}, Valid Targets: ${validTargets}`);
             // --- Targetable logic: use both targeting and validTargets ---
             const isTargetable = validTargets.includes(card?.instanceId);
 
