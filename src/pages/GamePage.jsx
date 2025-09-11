@@ -43,7 +43,7 @@ const GamePageContent = ({ initialGameState }) => {
         canPerformAction,
         actions,
         promptChoice,
-    } = useGameEngine(initialGameState, { showToast, setResolutionState });
+    } = useGameEngine(initialGameState, { showToast, setResolutionState, openCardPileViewer });
 
     const handleDragStart = (event) => {
         const { active } = event;

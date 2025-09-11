@@ -41,7 +41,24 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
     };
 
     const showToast = useCallback((message, options = {}) => {
-        toast(message, options);
+
+        const renderToast = (t) => (
+            <span onClick={() => toast.dismiss(t.id)} style={{ cursor: 'pointer' }}>
+                {message}
+            </span>
+        );
+        
+       switch (options.style) {
+            case 'success':
+                toast.success(renderToast);
+                break;
+            case 'error':
+                toast.error(renderToast);
+                break;
+            default: // 'info' or anything else
+                toast(renderToast, { icon: 'ℹ️' });
+                break;
+        }
     }, []);
 
 

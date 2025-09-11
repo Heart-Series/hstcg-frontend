@@ -11,8 +11,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
     const socket = useSocket();
     const { user } = useAuth();
     const { gameId } = useParams();
-    const { showToast = () => { }, setResolutionState = () => { } } = callbacks;
-
+    const { showToast = () => { }, setResolutionState = () => { }, openCardPileViewer = () => { } } = callbacks;
 
     // Listener for all server updates
     useEffect(() => {
@@ -40,26 +39,45 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
             setPromptChoice(payload);
         };
 
-        const handleEffectActivated = (payload) => {
-            console.log("Received game:effectActivated", payload);
+        // const handleEffectActivated = (payload) => {
+        //     console.log("Received game:effectActivated", payload);
+        //     if (payload.message) {
+        //         showToast(payload.message);
+        //     }
+        // };
+
+        const handleShowToast = (payload) => {
+            console.log("Received game:showToast", payload);
             if (payload.message) {
-                showToast(payload.message);
+                // Pass the whole payload, which includes the 'style' property
+                showToast(payload.message, payload);
             }
         };
 
+         const handleShowReveal = (payload) => {
+            console.log("Received game:showReveal", payload);
+            if (payload.cards && payload.cards.length > 0) {
+                // We can reuse the CardPileViewer for this!
+                openCardPileViewer(payload.title, payload.cards);
+            }
+        };
 
+        socket.on('game:showToast', handleShowToast);
         socket.on('game:updated', handleGameUpdate);
         socket.on('game:error', handleGameError);
         socket.on('game:promptChoice', handlePromptChoice);
-        socket.on('game:effectActivated', handleEffectActivated);
+        socket.on('game:showReveal', handleShowReveal);
+        // socket.on('game:effectActivated', handleEffectActivated);
 
         return () => {
+            socket.off('game:showToast', handleShowToast);
             socket.off('game:updated', handleGameUpdate);
             socket.off('game:error', handleGameError);
             socket.off('game:promptChoice', handlePromptChoice);
-            socket.off('game:effectActivated', handleEffectActivated);
+            socket.off('game:showReveal', handleShowReveal);
+            // socket.off('game:effectActivated', handleEffectActivated);
         };
-    }, [socket, gameState, showToast]);
+    }, [socket, gameState, showToast, openCardPileViewer]);
 
     // --- Unified Player Action ---
     const performAction = useCallback((type, payload = {}) => {
@@ -95,7 +113,6 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
     const playCardToActive = useCallback((instanceId) => {
         performAction('playCardToActive', { instanceId });
     }, [performAction]);
-
 
     const playCardToBench = useCallback((instanceId, benchIndex) => {
         performAction('playCardToBench', { instanceId, benchIndex });
