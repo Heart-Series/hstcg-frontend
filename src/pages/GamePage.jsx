@@ -36,7 +36,6 @@ const GamePageContent = ({ initialGameState }) => {
     // Initialize the game engine
     const {
         gameState,
-        error,
         myPlayerState,
         opponentState,
         isMyTurn,
@@ -236,12 +235,7 @@ const GamePageContent = ({ initialGameState }) => {
             onDragEnd={handleDragEnd}
         >
             <div className="h-[calc(100vh-5rem)] overflow-hidden bg-gray-800 text-white flex flex-col">
-                {/* Display temporary game errors */}
-                {error && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-500 p-3 rounded-lg shadow-lg z-50">
-                        {error}
-                    </div>
-                )}
+              
 
                 {viewingCardPile && (
                     <CardPileViewer

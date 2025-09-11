@@ -6,7 +6,6 @@ import { useParams } from 'react-router-dom';
 
 export const useGameEngine = (initialGameState, callbacks = {}) => {
     const [gameState, setGameState] = useState(initialGameState);
-    const [error, setError] = useState(null); // To display game errors
     const [promptChoice, setPromptChoice] = useState(null);
     const socket = useSocket();
     const { user } = useAuth();
@@ -29,9 +28,10 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
         };
         const handleGameError = (errorMessage) => {
             console.error("Game Error:", errorMessage);
-            setError(errorMessage);
-            // Clear the error message after a few seconds
-            setTimeout(() => setError(null), 3000);
+            if (errorMessage) {
+                // Use our toast system to show the error!
+                showToast(errorMessage, { style: 'error' });
+            }
         };
         const handlePromptChoice = (payload) => {
             console.log("Received game:promptChoice", payload);
@@ -54,7 +54,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
             }
         };
 
-         const handleShowReveal = (payload) => {
+        const handleShowReveal = (payload) => {
             console.log("Received game:showReveal", payload);
             if (payload.cards && payload.cards.length > 0) {
                 // We can reuse the CardPileViewer for this!
@@ -157,7 +157,6 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
 
     return {
         gameState,
-        error,
         myPlayerState,
         opponentState,
         isMyTurn,
