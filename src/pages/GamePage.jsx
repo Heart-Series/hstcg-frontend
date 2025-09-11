@@ -111,14 +111,20 @@ const GamePageContent = ({ initialGameState }) => {
             return;
         }
 
-        // --- CHECK 3: Was a PLAYER card dropped on a bench slot? ---
+        // --- CHECK 3 : Was a Player Card dropped on an EMPTY active slot during the main phase? ---
+        if (gameState.phase === 'main_phase' && dropZoneId === 'my-active' && !myPlayerState.activeCard) {
+            actions.playCardToActive(instanceId);
+            return;
+        }
+
+        // --- CHECK 4: Was a PLAYER card dropped on a bench slot? ---
         if (gameState.phase === 'main_phase' && dropZoneId.startsWith('my-bench-')) {
             const benchIndex = parseInt(dropZoneId.split('-')[2]);
             actions.playCardToBench(instanceId, benchIndex);
             return;
         }
 
-        // --- CHECK 4: Was a SUPPORT card dropped on the support slot? ---
+        // --- CHECK 5: Was a SUPPORT card dropped on the support slot? ---
         if (gameState.phase === 'main_phase' && dropZoneId === 'my-support') {
             actions.playSupportCard(instanceId);
             return;

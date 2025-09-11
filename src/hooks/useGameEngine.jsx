@@ -92,6 +92,11 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
         performAction('setInitialActive', { instanceId });
     }, [performAction]);
 
+    const playCardToActive = useCallback((instanceId) => {
+        performAction('playCardToActive', { instanceId });
+    }, [performAction]);
+
+
     const playCardToBench = useCallback((instanceId, benchIndex) => {
         performAction('playCardToBench', { instanceId, benchIndex });
     }, [performAction]);
@@ -145,6 +150,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
             playCard,
             endTurn,
             setInitialActive,
+            playCardToActive,
             playCardToBench,
             playSupportCard,
             playItemCard,

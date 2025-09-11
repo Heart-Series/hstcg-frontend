@@ -134,7 +134,8 @@ const PlayerArea = ({
         // Case 2: Dragging a Player card
         if (draggedCard?.cardType === 'Player') {
             // It's a valid drop IF it's the setup phase AND you haven't chosen a card yet.
-            return gameState.phase === 'setup' && !playerState.hasChosenActive;
+            console.log(`Player Active Card Droppable  ${gameState.phase === 'setup' || (gameState?.phase === 'main_phase' && gameState?.activePlayerId === playerState.socketId && !playerState.activeCard)}`)
+            return gameState.phase === 'setup' || (gameState?.phase === 'main_phase' && gameState?.activePlayerId === playerState.socketId && !playerState.activeCard);
         }
 
         // Default: not a valid drop
