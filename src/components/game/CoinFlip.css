@@ -1,0 +1,78 @@
+/* src/components/game/CoinFlip.css */
+
+.coin-flip-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.scene {
+  width: 200px;
+  height: 200px;
+  perspective: 1000px;
+}
+
+.coin {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  /* Animation properties that are the same for both outcomes */
+  animation-duration: 3s;
+  animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1); /* Nice ease-out */
+  animation-fill-mode: forwards; /* Stick at the final frame */
+}
+
+/* Common properties for BOTH faces */
+.coin-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  backface-visibility: hidden; /* Crucial: hides the back of a face when it turns away */
+  background-size: cover;
+  background-position: center;
+  box-shadow: inset 0 0 25px rgba(0,0,0,0.3);
+}
+
+/* --- THE CLEANED UP LOGIC --- */
+
+/* The front face needs no transform */
+.coin-heads {
+  background-image: url('/images/heads.png');
+}
+
+/* The back face is rotated 180 degrees to face away at the start */
+.coin-tails {
+  transform: rotateY(180deg);
+  background-image: url('/images/tails.png'); /* Ensure this path is correct! */
+}
+
+/* --- ANIMATION LOGIC --- */
+
+/* If the coin has the .heads class, use the spin-to-heads animation */
+.coin.heads {
+  animation-name: spin-to-heads;
+}
+
+/* If the coin has the .tails class, use the spin-to-tails animation */
+.coin.tails {
+  animation-name: spin-to-tails;
+}
+
+/* This animation ends on a full number of spins, showing the front */
+@keyframes spin-to-heads {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(1800deg); } /* 5 full spins */
+}
+
+/* This animation ends on a half-spin, showing the back */
+@keyframes spin-to-tails {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(1980deg); } /* 5.5 spins */
+}

@@ -14,10 +14,19 @@ import Card from '../components/Card';
 import CardPileViewer from '../components/game/CardPileViewer';
 import PromptDisplay from '../components/game/PromptDisplay';
 import { useMemo } from 'react';
+import CoinFlipAnimation from '../components/game/CoinFlipAnimation';
+import { useTexture } from '@react-three/drei';
 // import GameLog from '../components/game/GameLog';
 // import GameOverScreen from '../components/game/GameOverScreen'; // For the future
 
 const GamePageContent = ({ initialGameState }) => {
+
+    useEffect(() => {
+        // This tells Three.js to start downloading these textures in the background.
+        // The empty dependency array [] means this effect runs only once when the component mounts.
+        useTexture.preload('/images/heads.png');
+        useTexture.preload('/images/tails.png');
+    }, []);
 
     // UI state from context
     const {
@@ -33,6 +42,12 @@ const GamePageContent = ({ initialGameState }) => {
         showToast
     } = useGameUI();
 
+    const [animation, setAnimation] = useState(null);
+
+    const showAnimation = (animationData) => {
+        setAnimation(animationData);
+    };
+
     // Initialize the game engine
     const {
         gameState,
@@ -42,7 +57,7 @@ const GamePageContent = ({ initialGameState }) => {
         canPerformAction,
         actions,
         promptChoice,
-    } = useGameEngine(initialGameState, { showToast, setResolutionState, openCardPileViewer });
+    } = useGameEngine(initialGameState, { showToast, setResolutionState, openCardPileViewer, showAnimation });    
 
     const handleDragStart = (event) => {
         const { active } = event;
@@ -167,15 +182,9 @@ const GamePageContent = ({ initialGameState }) => {
             return;
         }
 
-        // Case 1: Hijack Action
-        // if (promptChoice.hijackAction) {
-        //     setTargeting({
-        //         isTargeting: true,
-        //         action: promptChoice.newAction,
-        //         hijackState: promptChoice.hijackState,
-        //         validTargets: promptChoice.newAction.validTargets || [],
-        //     });
-        //     return;
+        // Case 1 : Play Animation 
+        // if (promptChoice.uiAction === 'PLAY_ANIMATION' && promptChoice.animation?.type === 'COIN_FLIP') {
+        //     setAnimation(promptChoice.animation); // Activate the animation
         // }
 
         // Case 2: Open Inspector
@@ -205,6 +214,25 @@ const GamePageContent = ({ initialGameState }) => {
 
     }, [promptChoice])
 
+    useEffect(() => {
+        if (promptChoice?.uiAction === 'WAIT_FOR_ANIMATION') {
+            console.log("Game is paused, waiting for animation to complete...");
+            const animationDuration = 3500;
+
+            const timer = setTimeout(() => {
+                console.log("Animation time is up. Resolving prompt.");
+                actions.resolveAbilityStep(
+                    promptChoice.choosingState.sourceInstanceId,
+                    promptChoice.choosingState.initialTargetId,
+                    promptChoice.phase,
+                    promptChoice.choosingState
+                );
+            }, animationDuration);
+
+            return () => clearTimeout(timer);
+        }
+    }, [promptChoice, actions]);
+
     const promptMessage = useMemo(() => {
         if (resolutionState.isActive) {
             return "End-of-Turn Actions";
@@ -225,7 +253,20 @@ const GamePageContent = ({ initialGameState }) => {
         console.log('Targeting State:', targeting);
     }, [targeting]);
 
+    const handleAnimationComplete = () => {
+        // This is called by the animation component when it's done.
+        setAnimation(null); // Hide the animation component
 
+        // Now, we call back to the server to continue the action.
+        if (promptChoice) {
+            actions.resolveAbilityStep(
+                promptChoice.choosingState.sourceInstanceId,
+                promptChoice.choosingState.initialTargetId,
+                promptChoice.phase,
+                promptChoice.choosingState
+            );
+        }
+    };
 
 
     return (
@@ -235,13 +276,20 @@ const GamePageContent = ({ initialGameState }) => {
             onDragEnd={handleDragEnd}
         >
             <div className="h-[calc(100vh-5rem)] overflow-hidden bg-gray-800 text-white flex flex-col">
-              
+
 
                 {viewingCardPile && (
                     <CardPileViewer
                         title={viewingCardPile.title}
                         cards={viewingCardPile.cards}
                         onClose={closeCardPileViewer}
+                    />
+                )}
+
+                {animation?.type === 'COIN_FLIP' && (
+                    <CoinFlipAnimation
+                        result={animation.result}
+                        onAnimationEnd={handleAnimationComplete}
                     />
                 )}
 

@@ -10,7 +10,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
     const socket = useSocket();
     const { user } = useAuth();
     const { gameId } = useParams();
-    const { showToast = () => { }, setResolutionState = () => { }, openCardPileViewer = () => { } } = callbacks;
+    const { showToast = () => { }, setResolutionState = () => { }, openCardPileViewer = () => { }, showAnimation = () => {}  } = callbacks;
 
     // Listener for all server updates
     useEffect(() => {
@@ -62,6 +62,13 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
             }
         };
 
+        const handlePlayAnimation = (payload) => {
+            console.log("Received game:playAnimation", payload);
+            // The hook's only job is to call the function the component gave it.
+            showAnimation(payload);
+        };
+
+        socket.on('game:playAnimation', handlePlayAnimation);
         socket.on('game:showToast', handleShowToast);
         socket.on('game:updated', handleGameUpdate);
         socket.on('game:error', handleGameError);
@@ -77,7 +84,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
             socket.off('game:showReveal', handleShowReveal);
             // socket.off('game:effectActivated', handleEffectActivated);
         };
-    }, [socket, gameState, showToast, openCardPileViewer]);
+    }, [socket, showToast, openCardPileViewer, showAnimation, setResolutionState]);
 
     // --- Unified Player Action ---
     const performAction = useCallback((type, payload = {}) => {
