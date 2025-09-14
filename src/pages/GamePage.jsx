@@ -19,7 +19,7 @@ import { useTexture } from '@react-three/drei';
 // import GameLog from '../components/game/GameLog';
 // import GameOverScreen from '../components/game/GameOverScreen'; // For the future
 
-const GamePageContent = ({ initialGameState }) => {
+const GamePageContent = ({ initialGameState, isSpectator }) => {
 
     useEffect(() => {
         // This tells Three.js to start downloading these textures in the background.
@@ -57,7 +57,7 @@ const GamePageContent = ({ initialGameState }) => {
         canPerformAction,
         actions,
         promptChoice,
-    } = useGameEngine(initialGameState, { showToast, setResolutionState, openCardPileViewer, showAnimation });    
+    } = useGameEngine(initialGameState, isSpectator, { showToast, setResolutionState, openCardPileViewer, showAnimation });
 
     const handleDragStart = (event) => {
         const { active } = event;
@@ -144,32 +144,6 @@ const GamePageContent = ({ initialGameState }) => {
             return;
         }
     };
-
-    // Show a loading/error state if something is wrong
-    if (!gameState || !myPlayerState || !opponentState) {
-        return <div>Loading Game...</div>; // Or a more robust loading screen
-    }
-
-    // Check for a winner to show the game over screen
-    if (gameState.winner) {
-        return (
-            <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white">
-                <h1 className="text-4xl font-bold mb-4">Game Over!</h1>
-                <h2 className="text-2xl mb-2">{gameState.players[gameState.winner]?.username || 'Unknown'} wins!</h2>
-                <div className="mt-4 p-4 bg-gray-800 rounded-lg shadow-lg max-w-xl w-full">
-                    <h3 className="text-lg font-semibold mb-2">Game Log:</h3>
-                    <ul className="max-h-64 overflow-y-auto text-sm">
-                        {gameState.log.map((entry, idx) => (
-                            <li key={idx} className="mb-1">{entry}</li>
-                        ))}
-                    </ul>
-                </div>
-                <button className="mt-8 px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300" onClick={() => window.location.href = '/lobbies'}>
-                    Return to Lobby
-                </button>
-            </div>
-        );
-    }
 
     // --- PromptChoice Integration ---
     // If promptChoice is active, set up targeting system
@@ -268,12 +242,39 @@ const GamePageContent = ({ initialGameState }) => {
         }
     };
 
+    // Show a loading/error state if something is wrong
+    if (!gameState || !myPlayerState || !opponentState) {
+        return <div>Loading Game...</div>; // Or a more robust loading screen
+    }
+
+    // Check for a winner to show the game over screen
+    if (gameState.winner) {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white">
+                <h1 className="text-4xl font-bold mb-4">Game Over!</h1>
+                <h2 className="text-2xl mb-2">{gameState.players[gameState.winner]?.username || 'Unknown'} wins!</h2>
+                <div className="mt-4 p-4 bg-gray-800 rounded-lg shadow-lg max-w-xl w-full">
+                    <h3 className="text-lg font-semibold mb-2">Game Log:</h3>
+                    <ul className="max-h-64 overflow-y-auto text-sm">
+                        {gameState.log.map((entry, idx) => (
+                            <li key={idx} className="mb-1">{entry}</li>
+                        ))}
+                    </ul>
+                </div>
+                <button className="mt-8 px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300" onClick={() => window.location.href = '/lobbies'}>
+                    Return to Lobby
+                </button>
+            </div>
+        );
+    }
+
 
     return (
         <DndContext
             collisionDetection={closestCenter}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            disabled={isSpectator}
         >
             <div className="h-[calc(100vh-5rem)] overflow-hidden bg-gray-800 text-white flex flex-col">
 
@@ -341,6 +342,7 @@ const GamePageContent = ({ initialGameState }) => {
 const GamePage = () => {
     const location = useLocation();
     const initialGameState = location.state?.initialGameState;
+    const initialIsSpectator = location.state?.isSpectator || false;
 
     // Use the game engine here to get actions and player states
     const {
@@ -348,12 +350,13 @@ const GamePage = () => {
         myPlayerState,
         opponentState,
         promptChoice,
+        isSpectator,
         ...rest
-    } = useGameEngine(initialGameState);
+    } = useGameEngine(initialGameState, initialIsSpectator);
 
     return (
         <GameUIProvider actions={actions} myPlayerState={myPlayerState} opponentState={opponentState} promptChoice={promptChoice}>
-            <GamePageContent initialGameState={initialGameState} />
+            <GamePageContent initialGameState={initialGameState} isSpectator={isSpectator} />
         </GameUIProvider>
     );
 };

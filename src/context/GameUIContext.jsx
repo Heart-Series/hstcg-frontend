@@ -67,7 +67,6 @@ export const GameUIProvider = ({ children, myPlayerState, opponentState, actions
         setTargeting({ isTargeting: false, action: null, });
     };
 
-
     // Context-aware card click handler
     const onCardClick = (clickedCard, isTargetable) => {
         const clickedInstanceId = clickedCard.instanceId;

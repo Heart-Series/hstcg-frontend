@@ -36,15 +36,23 @@ const LobbyPage = () => {
         const handleGameStarting = (gameState) => {
             console.log('Game starting!', gameState);
             if (lobbyId) {
-                console.log('Navigating to game page...');
-                navigate(`/game/${lobbyId}`, { state: { initialGameState: gameState } });
-                console.log('Navigate called');
+                // This is for players
+                navigate(`/game/${lobbyId}`, { state: { initialGameState: gameState, isSpectator: false } });
+            }
+        };
+
+        const handleSpectateStart = (gameState) => {
+            console.log('Spectating game!', gameState);
+            if (lobbyId) {
+                // This is for spectators
+                navigate(`/game/${lobbyId}`, { state: { initialGameState: gameState, isSpectator: true } });
             }
         };
 
         socket.on('lobby:updated', handleLobbyUpdated);
         socket.on('lobby:error', handleLobbyError);
         socket.on('game:starting', handleGameStarting);
+        socket.on('spectate:start', handleSpectateStart);
         console.log('Registered game:starting listener');
 
         // Cleanup function runs only when the component unmounts for good
@@ -56,6 +64,7 @@ const LobbyPage = () => {
             socket.off('lobby:updated', handleLobbyUpdated);
             socket.off('lobby:error', handleLobbyError);
             socket.off('game:starting', handleGameStarting);
+            socket.off('spectate:start', handleSpectateStart);
         };
     }, [socket, navigate, lobbyId]); // This is stable.
 

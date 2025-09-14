@@ -3,14 +3,31 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
 import { useParams } from 'react-router-dom';
+import { useMemo } from 'react';
+import { useRef } from 'react';
 
-export const useGameEngine = (initialGameState, callbacks = {}) => {
+export const useGameEngine = (initialGameState, isSpectator = false, callbacks = {}) => {
     const [gameState, setGameState] = useState(initialGameState);
+    const [isSpectatorMode, setIsSpectatorMode] = useState(isSpectator);
     const [promptChoice, setPromptChoice] = useState(null);
     const socket = useSocket();
     const { user } = useAuth();
     const { gameId } = useParams();
-    const { showToast = () => { }, setResolutionState = () => { }, openCardPileViewer = () => { }, showAnimation = () => {}  } = callbacks;
+    const { showToast = () => { }, setResolutionState = () => { }, openCardPileViewer = () => { }, showAnimation = () => { } } = callbacks;
+
+    const hasAttemptedRejoin = useRef(false);
+
+    useEffect(() => {
+        // We only attempt to rejoin if:
+        // 1. We have NO initial state from the lobby.
+        // 2. The gameState hasn't been populated by an event yet.
+        // 3. We haven't already tried.
+        if (!initialGameState && !gameState && socket && gameId && !hasAttemptedRejoin.current) {
+            console.log("No initial state. Attempting to rejoin or spectate...");
+            socket.emit('game:rejoinOrSpectate', { gameId });
+            hasAttemptedRejoin.current = true; // Mark that we've tried.
+        }
+    }, [socket, gameId, initialGameState, gameState]); // Add dependencies to be thorough
 
     // Listener for all server updates
     useEffect(() => {
@@ -68,12 +85,19 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
             showAnimation(payload);
         };
 
+        const handleSpectateStart = ({ gameState: spectateState }) => {
+            console.log("Spectator mode activated.");
+            setGameState(spectateState);
+            setIsSpectatorMode(true);
+        };
+
         socket.on('game:playAnimation', handlePlayAnimation);
         socket.on('game:showToast', handleShowToast);
         socket.on('game:updated', handleGameUpdate);
         socket.on('game:error', handleGameError);
         socket.on('game:promptChoice', handlePromptChoice);
         socket.on('game:showReveal', handleShowReveal);
+        socket.on('spectate:start', handleSpectateStart);
         // socket.on('game:effectActivated', handleEffectActivated);
 
         return () => {
@@ -82,6 +106,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
             socket.off('game:error', handleGameError);
             socket.off('game:promptChoice', handlePromptChoice);
             socket.off('game:showReveal', handleShowReveal);
+            socket.off('spectate:start', handleSpectateStart);
             // socket.off('game:effectActivated', handleEffectActivated);
         };
     }, [socket, showToast, openCardPileViewer, showAnimation, setResolutionState]);
@@ -151,9 +176,29 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
 
     // --- Derived State ---
     // Helper values to make the UI components' lives easier.
-    const myPlayerState = gameState?.players[socket?.id];
-    const opponentState = Object.entries(gameState?.players || {})
-        .find(([id]) => id !== socket?.id)?.[1];
+    const { myPlayerState, opponentState } = useMemo(() => {
+        if (!gameState?.players) return { myPlayerState: null, opponentState: null };
+
+        const playerIds = Object.keys(gameState.players);
+
+        if (isSpectatorMode) {
+            // For a spectator, "my" player is just the first one, "opponent" is the second.
+            const myId = playerIds[0];
+            const opponentId = playerIds[1];
+            return {
+                myPlayerState: gameState.players[myId],
+                opponentState: gameState.players[opponentId]
+            };
+        } else {
+            // For a player, find their state using their own socket.id
+            const myPlayer = gameState.players[socket?.id];
+            const opponent = Object.values(gameState.players).find(p => p.socketId !== socket?.id);
+            return {
+                myPlayerState: myPlayer,
+                opponentState: opponent
+            };
+        }
+    }, [gameState, socket?.id, isSpectatorMode]);
     const isMyTurn = (gameState?.phase === 'main_phase' && gameState?.activePlayerId === socket?.id) ||
         (gameState?.phase === 'action_resolution_phase' && gameState?.playerInResolution === socket?.id);
 
@@ -169,6 +214,7 @@ export const useGameEngine = (initialGameState, callbacks = {}) => {
         isMyTurn,
         canPerformAction,
         promptChoice,
+        isSpectator: isSpectatorMode,
         actions: {
             playCard,
             endTurn,
