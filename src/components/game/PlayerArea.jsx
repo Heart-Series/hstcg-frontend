@@ -195,19 +195,30 @@ const PlayerArea = ({
                                 ${isInvalidDropOnActive ? 'bg-red-500/40' : ''}
                             `}
                         >
-                            {activeCard
-                                ? <CardOnField
-                                    cardData={activeCard}
-                                    droppableId={`${playerPrefix}-active`}
-                                    activeDragData={activeDragData}
-                                    gameState={gameState}
-                                    isSelected={selectedCardId === activeCard.instanceId}
-                                    isTargetable={isActiveCardTargetable}
-                                    onCardClick={(cardData) => onCardClick(cardData, isActiveCardTargetable)}
-                                    onActionClick={onActionClick}
-                                />
-                                : <CardSlot />
-                            }
+                                {activeCard
+                                    ? (
+                                        // During the setup phase, the first active card chosen should be face-down
+                                        // for the opponent only until the game actually starts. The owner should
+                                        // still see their own active card.
+                                        (gameState?.phase === 'setup' && isOpponent) ? (
+                                            <div className="w-full h-full rounded-lg overflow-hidden cursor-default select-none">
+                                                <img src="/images/card_back.png" alt="Face Down" className="w-full h-full object-cover rounded-lg" />
+                                            </div>
+                                        ) : (
+                                            <CardOnField
+                                                cardData={activeCard}
+                                                droppableId={`${playerPrefix}-active`}
+                                                activeDragData={activeDragData}
+                                                gameState={gameState}
+                                                isSelected={selectedCardId === activeCard.instanceId}
+                                                isTargetable={isActiveCardTargetable}
+                                                onCardClick={(cardData) => onCardClick(cardData, isActiveCardTargetable)}
+                                                onActionClick={onActionClick}
+                                            />
+                                        )
+                                    )
+                                    : <CardSlot />
+                                }
                         </div>
 
                         {/* Support Card - positioned to the right */}
