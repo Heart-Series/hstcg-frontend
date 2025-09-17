@@ -5,7 +5,7 @@ import DeckPile from './DeckPile';
 import { useGameUI } from '../../context/GameUIContext';
 import InspectorPanel from './InspectorPanel';
 
-const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState, activeDragData, promptChoice }) => {
+const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState, activeDragData, promptChoice, isSpectator = false }) => {
     const { selectedCard, onCardClick, onActionClick, targeting, cancelAllActions, resolutionState, setResolutionState } = useGameUI();
 
     // --- Highlight valid targets if promptChoice is active ---
@@ -29,6 +29,22 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
         }
     };
 
+     const getTurnText = () => {
+        // Highest priority: Setup Phase
+        if (gameState.phase === 'setup') {
+            return "Setup Phase";
+        }
+        
+        // Next: Spectator View
+        if (isSpectator) {
+            const activePlayer = Object.values(gameState.players).find(p => p.socketId === gameState.activePlayerId);
+            return activePlayer ? `${activePlayer.username}'s Turn` : "Loading...";
+        }
+
+        // Default: Player View
+        return isMyTurn ? "Your Turn" : "Opponent's Turn";
+    };
+
     // Pass validTargets to PlayerArea for contextual highlighting
     return (
         <div className="flex-grow flex flex-col justify-center items-center gap-2 h-full py-2 relative" onClick={cancelAllActions}>
@@ -43,7 +59,7 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
                 }}
             >
                 <h2 className="text-md font-bold uppercase tracking-widest text-white mb-1">
-                    {isMyTurn ? "Your Turn" : "Opponent's Turn"}
+                    {getTurnText()}
                 </h2>
                 <p className="text-sm text-whitet-100 -mono">
                     Turn {gameState.turn}
@@ -60,7 +76,7 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
 
             {/* Opponent's Area (rendered in reverse) */}
             <div className="flex-1 flex items-end justify-center w-full">
-                <PlayerArea playerState={opponentState} isOpponent={true} actions={actions} gameState={gameState} activeDragData={activeDragData} promptChoice={promptChoice} validTargets={validTargets} />
+                <PlayerArea playerState={opponentState} isOpponent={true} actions={actions} gameState={gameState} activeDragData={activeDragData} promptChoice={promptChoice} validTargets={validTargets} isSpectator={isSpectator} />
             </div>
 
             {/* A simple divider for the middle of the board */}
@@ -68,7 +84,7 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
 
             {/* My Area */}
             <div className="flex-1 flex items-start justify-center w-full">
-                <PlayerArea playerState={myPlayerState} isOpponent={false} actions={actions} gameState={gameState} activeDragData={activeDragData} promptChoice={promptChoice} validTargets={validTargets} />
+                <PlayerArea playerState={myPlayerState} isOpponent={false} actions={actions} gameState={gameState} activeDragData={activeDragData} promptChoice={promptChoice} validTargets={validTargets} isSpectator={isSpectator} />
             </div>
         </div>
     );

@@ -10,6 +10,7 @@ import Card from '../Card';
 const PlayerArea = ({
     playerState,
     isOpponent = false,
+    isSpectator= false, 
     actions,
     gameState,
     activeDragData,
@@ -162,8 +163,11 @@ const PlayerArea = ({
             {/* Points Indicator */}
             <div
                 className={`absolute ${isOpponent ? 'top-2 right-2' : 'bottom-2 right-2'} bg-yellow-600 text-white rounded-lg px-3 py-1 text-sm font-bold shadow-md z-20`}
-                style={{ pointerEvents: 'none' }}
+                style={{ pointerEvents: 'none' }}   
             >
+                 {isSpectator && (
+                    <span className="block text-xs font-normal opacity-80">{playerState?.username}</span>
+                )}
                 Points: {playerState?.points ?? 0}
             </div>
 

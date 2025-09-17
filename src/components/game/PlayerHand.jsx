@@ -35,7 +35,7 @@ const DraggableCard = ({ card, cardHandIndex, canPerformAction }) => {
     );
 };
 
-const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction, promptChoice }) => {
+const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction, promptChoice, isSpectator  }) => {
     const { isHandOpen, setIsHandOpen, targeting, setTargeting } = useGameUI();
     const { actions } = useGameEngine();
 
@@ -68,6 +68,10 @@ const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction, promptChoic
     const handleCancel = () => {
         setTargeting({ isTargeting: false });
     };
+
+    if (isSpectator) {
+        return null;
+    }
 
     // --- UI rendering ---
     return (

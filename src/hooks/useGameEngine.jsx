@@ -31,11 +31,13 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
 
     // Listener for all server updates
     useEffect(() => {
-        console.log("Setting up game engine listeners");
         if (!socket) return;
+
+        console.log("Setting up game engine listeners");
 
         const handleGameUpdate = (newGameState) => {
             console.log("Received game:updated", newGameState);
+
             setGameState(newGameState);
             setResolutionState({
                 isActive: newGameState.phase === 'action_resolution_phase',
@@ -92,6 +94,12 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
         };
 
         socket.on('game:playAnimation', handlePlayAnimation);
+        // Prevent duplicate toast handlers if the hook is mounted more than once
+        try {
+            socket.off('game:showToast');
+        } catch (e) {
+            // ignore if socket.off isn't available or errors
+        }
         socket.on('game:showToast', handleShowToast);
         socket.on('game:updated', handleGameUpdate);
         socket.on('game:error', handleGameError);
@@ -177,7 +185,9 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
     // --- Derived State ---
     // Helper values to make the UI components' lives easier.
     const { myPlayerState, opponentState } = useMemo(() => {
-        if (!gameState?.players) return { myPlayerState: null, opponentState: null };
+        if (!gameState?.players || !user?.userId) { // Add a check for the authenticated user
+            return { myPlayerState: null, opponentState: null };
+        }
 
         const playerIds = Object.keys(gameState.players);
 
@@ -191,14 +201,16 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
             };
         } else {
             // For a player, find their state using their own socket.id
-            const myPlayer = gameState.players[socket?.id];
-            const opponent = Object.values(gameState.players).find(p => p.socketId !== socket?.id);
+            const allPlayers = Object.values(gameState.players);
+            const myPlayer = allPlayers.find(p => p.userId.toString() === user.userId.toString());
+            const opponent = allPlayers.find(p => p.userId.toString() !== user.userId.toString());
+
             return {
                 myPlayerState: myPlayer,
                 opponentState: opponent
             };
         }
-    }, [gameState, socket?.id, isSpectatorMode]);
+    }, [gameState, user?.userId, isSpectatorMode]);
     const isMyTurn = (gameState?.phase === 'main_phase' && gameState?.activePlayerId === socket?.id) ||
         (gameState?.phase === 'action_resolution_phase' && gameState?.playerInResolution === socket?.id);
 

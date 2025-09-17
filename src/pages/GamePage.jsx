@@ -312,6 +312,7 @@ const GamePageContent = ({ initialGameState, isSpectator }) => {
                         gameState={gameState}
                         activeDragData={activeDragData}
                         promptChoice={promptChoice}
+                        isSpectator={isSpectator} 
                     />
                 </div>
 
@@ -324,6 +325,7 @@ const GamePageContent = ({ initialGameState, isSpectator }) => {
                     setIsOpen={setIsHandOpen}
                     canPerformAction={canPerformAction}
                     promptChoice={promptChoice}
+                    isSpectator={isSpectator}
                 />
             </div>
 

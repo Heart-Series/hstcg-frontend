@@ -87,11 +87,11 @@ const LobbyPage = () => {
     // --- DERIVED STATE: Use useMemo for stability ---
     const me = useMemo(() =>
         // Defensive coding: use optional chaining (?.) and ensure both IDs are strings for comparison.
-        lobbyData?.players.find(p => p.userId?.toString() === user?._id?.toString()),
+        lobbyData?.players.find(p => p.userId?.toString() === user?.userId?.toString()),
         [lobbyData, user]
     );
     const opponent = useMemo(() =>
-        lobbyData?.players.find(p => p.userId?.toString() !== user?._id?.toString()),
+        lobbyData?.players.find(p => p.userId?.toString() !== user?.userId?.toString()),
         [lobbyData, user]
     );
     const isHost = lobbyData?.hostId === socket?.id;
