@@ -88,7 +88,7 @@ const GamePageContent = ({ initialGameState, isSpectator }) => {
             const parts = dropZoneId.split('-');
             const owner = parts[0];
             const zone = parts[1];
-            const index = parts[2] !== undefined ? parseInt(idx) : null;
+            const index = parts[2] !== undefined ? parseInt(parts[2]) : null;
 
             // Find the card that was dropped on from the gameState
             const player = owner === 'my' ? myPlayerState : opponentState;

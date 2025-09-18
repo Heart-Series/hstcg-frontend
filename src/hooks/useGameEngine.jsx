@@ -38,6 +38,11 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
         const handleGameUpdate = (newGameState) => {
             console.log("Received game:updated", newGameState);
 
+            // Starter selection is authoritative from the server. The frontend
+            // will not auto-pick a starter anymore. The server should emit
+            // a `game:updated` with `activePlayerId` set, and may also emit
+            // `game:showToast` to announce who starts.
+
             setGameState(newGameState);
             setResolutionState({
                 isActive: newGameState.phase === 'action_resolution_phase',
@@ -94,12 +99,12 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
         };
 
         socket.on('game:playAnimation', handlePlayAnimation);
-        // Prevent duplicate toast handlers if the hook is mounted more than once
-        try {
-            socket.off('game:showToast');
-        } catch (e) {
-            // ignore if socket.off isn't available or errors
-        }
+        // // Prevent duplicate toast handlers if the hook is mounted more than once
+        // try {
+        //     socket.off('game:showToast');
+        // } catch (e) {
+        //     // ignore if socket.off isn't available or errors
+        // }
         socket.on('game:showToast', handleShowToast);
         socket.on('game:updated', handleGameUpdate);
         socket.on('game:error', handleGameError);
@@ -117,7 +122,7 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
             socket.off('spectate:start', handleSpectateStart);
             // socket.off('game:effectActivated', handleEffectActivated);
         };
-    }, [socket, showToast, openCardPileViewer, showAnimation, setResolutionState]);
+    }, [socket, showToast, openCardPileViewer, showAnimation, setResolutionState, gameId]);
 
     // --- Unified Player Action ---
     const performAction = useCallback((type, payload = {}) => {
