@@ -1,9 +1,8 @@
 // src/components/game/PlayerHand.jsx
 import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import Card from '../Card'; // Your main card component
-import { useGameUI } from '../../context/GameUIContext';
-import { useGameEngine } from '../../hooks/useGameEngine';
+import Card from '../Card'; 
+import { useGame } from '../../context/GameContext';
 
 const DraggableCard = ({ card, cardHandIndex, canPerformAction }) => {
     // console.log(`Can Perform Action: ${canPerformAction}`)
@@ -36,8 +35,7 @@ const DraggableCard = ({ card, cardHandIndex, canPerformAction }) => {
 };
 
 const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction, promptChoice, isSpectator  }) => {
-    const { isHandOpen, setIsHandOpen, targeting, setTargeting } = useGameUI();
-    const { actions } = useGameEngine();
+    const { isHandOpen, setIsHandOpen, targeting, setTargeting, actions } = useGame();
 
     // --- Multi-phase targeting logic ---
     const handleCardDrop = (card, initialTarget) => {

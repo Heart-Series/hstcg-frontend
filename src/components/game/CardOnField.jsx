@@ -1,11 +1,10 @@
 // src/components/game/CardOnField.jsx
 import React from 'react';
 import Card from '../Card';
-import { useDroppable } from '@dnd-kit/core';
-import { useGameUI } from '../../context/GameUIContext';
+import { useGame } from '../../context/GameContext';
 
 const CardOnField = ({ cardData, isSelected, isTargetable, onCardClick, onActionClick, }) => {
-    const { resolutionState } = useGameUI();
+    const { resolutionState } = useGame();
     const myResolutionActions = resolutionState.isActive
         ? resolutionState.actions.filter(action => action.sourceCardId === cardData.instanceId)
         : [];

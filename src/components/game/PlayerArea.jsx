@@ -4,8 +4,8 @@ import CardOnField from './CardOnField';
 import CardSlot from './CardSlot';
 import DeckPile from './DeckPile';
 import { useDroppable } from '@dnd-kit/core';
-import { useGameUI } from '../../context/GameUIContext';
 import Card from '../Card';
+import { useGame } from '../../context/GameContext';
 
 const PlayerArea = ({
     playerState,
@@ -16,8 +16,7 @@ const PlayerArea = ({
     activeDragData,
     promptChoice,
 }) => {
-    // Use useGameUI for UI state
-    const { selectedCardId, onCardClick, onActionClick, targeting, openInspector, openCardPileViewer } = useGameUI();
+    const { selectedCardId, onCardClick, onActionClick, targeting, openInspector, openCardPileViewer } = useGame();
     const { activeCard, bench, supportCard, attachedItems, deck, discard } = playerState;
     const playerPrefix = isOpponent ? 'opponent' : 'my';
 

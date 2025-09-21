@@ -1,12 +1,10 @@
 // src/components/game/InspectorPanel.jsx
 import React from 'react';
-import { useGameUI } from '../../context/GameUIContext';
 import Card from '../Card'; // Your reusable Card component
-import { useGameEngine } from '../../hooks/useGameEngine';
+import { useGame } from '../../context/GameContext';
 
 const InspectorPanel = () => {
-    const { inspectorCardData, closeInspector } = useGameUI();
-    const { actions, promptChoice } = useGameEngine(); // Get actions and the current prompt
+    const { inspectorCardData, closeInspector, actions, promptChoice } = useGame();
 
     if (!inspectorCardData) return null;
 

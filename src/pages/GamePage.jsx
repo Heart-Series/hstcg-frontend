@@ -4,8 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 
 import { useLocation } from 'react-router-dom';
-import { useGameEngine } from '../hooks/useGameEngine';
-import { GameUIProvider, useGameUI } from '../context/GameUIContext';
 
 // Import all the "dumb" UI components
 import GameBoard from '../components/game/GameBoard';
@@ -13,13 +11,13 @@ import PlayerHand from '../components/game/PlayerHand';
 import Card from '../components/Card';
 import CardPileViewer from '../components/game/CardPileViewer';
 import PromptDisplay from '../components/game/PromptDisplay';
-import { useMemo } from 'react';
 import CoinFlipAnimation from '../components/game/CoinFlipAnimation';
 import { useTexture } from '@react-three/drei';
+import { GameProvider, useGame } from '../context/GameContext';
 // import GameLog from '../components/game/GameLog';
 // import GameOverScreen from '../components/game/GameOverScreen'; // For the future
 
-const GamePageContent = ({ initialGameState, isSpectator }) => {
+const GamePageContent = ({ }) => {
 
     useEffect(() => {
         // This tells Three.js to start downloading these textures in the background.
@@ -28,120 +26,30 @@ const GamePageContent = ({ initialGameState, isSpectator }) => {
         useTexture.preload('/images/tails.png');
     }, []);
 
-    // UI state from context
     const {
-        selectedCard, setSelectedCard,
-        targeting, setTargeting,
+        gameState, myPlayerState, opponentState, isSpectator,
+        actions, promptChoice, isMyTurn, canPerformAction,
+        animation, hideAnimation,
+        viewingCardPile, openCardPileViewer, closeCardPileViewer,
+        promptMessage,
+        activeDragId, activeDragData,
         isHandOpen, setIsHandOpen,
-        activeDragId, setActiveDragId,
-        activeDragData, setActiveDragData,
-        openInspector,
-        viewingCardPile,
-        openCardPileViewer, closeCardPileViewer,
-        resolutionState, setResolutionState,
-        showToast
-    } = useGameUI();
+        handleDragStart, handleDragEnd,
+        targeting, setTargeting, openInspector
+    } = useGame();    
 
-    const [animation, setAnimation] = useState(null);
+    const handleAnimationComplete = () => {
+        // This is called by the animation component when it's done.
+        hideAnimation(null); // Hide the animation component
 
-    const showAnimation = (animationData) => {
-        setAnimation(animationData);
-    };
-
-    // Initialize the game engine
-    const {
-        gameState,
-        myPlayerState,
-        opponentState,
-        isMyTurn,
-        canPerformAction,
-        actions,
-        promptChoice,
-    } = useGameEngine(initialGameState, isSpectator, { showToast, setResolutionState, openCardPileViewer, showAnimation });
-
-    const handleDragStart = (event) => {
-        const { active } = event;
-        // active.data.current holds the extra info we'll attach to the card
-        setActiveDragId(active.id);
-        setActiveDragData(active.data.current);
-        // Collapse the hand when a drag starts
-        setIsHandOpen(false);
-    };
-
-    const handleDragEnd = (event) => {
-        const { active, over } = event;
-
-        setActiveDragId(null);
-        setActiveDragData(null);
-
-        if (!over) return;
-
-        // --- THE ONLY IDENTIFIER WE NEED FROM THE DRAGGED CARD ---
-        const draggedCard = active.data.current?.cardData;
-        const instanceId = active.data.current?.cardData?.instanceId;
-        if (!instanceId) return; // If for some reason there's no ID, do nothing.
-        console.log(instanceId)
-
-        const dropZoneId = over.id;
-
-        if (draggedCard?.initiatesUI === 'inspector') {
-            const parts = dropZoneId.split('-');
-            const owner = parts[0];
-            const zone = parts[1];
-            const index = parts[2] !== undefined ? parseInt(parts[2]) : null;
-
-            // Find the card that was dropped on from the gameState
-            const player = owner === 'my' ? myPlayerState : opponentState;
-            const targetCard = zone === 'active' ? player.activeCard : player.bench[index];
-
-            if (targetCard) {
-                openInspector(targetCard);
-            }
-            // We do NOT send an action to the backend yet. The UI takes over.
-            return;
-        }
-
-        // --- Handle dropping based on the game phase and drop zone ID ---
-        if (active.data.current?.cardData?.cardType === 'Item') {
-            const parts = dropZoneId.split('-');
-            const owner = parts[0];
-            const zone = parts[1];
-            const idx = parts[2];
-
-            const target = {
-                playerId: owner === 'my' ? myPlayerState.socketId : opponentState.socketId,
-                zone: zone,
-                index: idx !== undefined ? parseInt(idx) : null,
-            };
-
-            // Call the correct action for items.
-            actions.playItemCard(instanceId, target);
-            return; // Action sent, stop processing.
-        }
-
-        // --- CHECK 2: Was something dropped on the active slot during setup? ---
-        if (gameState.phase === 'setup' && dropZoneId === 'my-active') {
-            actions.setInitialActive(instanceId);
-            return;
-        }
-
-        // --- CHECK 3 : Was a Player Card dropped on an EMPTY active slot during the main phase? ---
-        if (gameState.phase === 'main_phase' && dropZoneId === 'my-active' && !myPlayerState.activeCard) {
-            actions.playCardToActive(instanceId);
-            return;
-        }
-
-        // --- CHECK 4: Was a PLAYER card dropped on a bench slot? ---
-        if (gameState.phase === 'main_phase' && dropZoneId.startsWith('my-bench-')) {
-            const benchIndex = parseInt(dropZoneId.split('-')[2]);
-            actions.playCardToBench(instanceId, benchIndex);
-            return;
-        }
-
-        // --- CHECK 5: Was a SUPPORT card dropped on the support slot? ---
-        if (gameState.phase === 'main_phase' && dropZoneId === 'my-support') {
-            actions.playSupportCard(instanceId);
-            return;
+        // Now, we call back to the server to continue the action.
+        if (promptChoice) {
+            actions.resolveAbilityStep(
+                promptChoice.choosingState.sourceInstanceId,
+                promptChoice.choosingState.initialTargetId,
+                promptChoice.phase,
+                promptChoice.choosingState
+            );
         }
     };
 
@@ -207,40 +115,11 @@ const GamePageContent = ({ initialGameState, isSpectator }) => {
         }
     }, [promptChoice, actions]);
 
-    const promptMessage = useMemo(() => {
-        if (resolutionState.isActive) {
-            return "End-of-Turn Actions";
-        }
-        // When we enter targeting mode for the copied attack, this will read the title
-        if (targeting.isTargeting && targeting.action?.title) {
-            return targeting.action.title;
-        }
-        // This is a fallback for the first step of Revenge
-        if (promptChoice?.title) {
-            return promptChoice.title;
-        }
-        return null;
-    }, [resolutionState.isActive, targeting, promptChoice]);
 
     // --- Debugging: Log targeting state ---
     useEffect(() => {
         console.log('Targeting State:', targeting);
     }, [targeting]);
-
-    const handleAnimationComplete = () => {
-        // This is called by the animation component when it's done.
-        setAnimation(null); // Hide the animation component
-
-        // Now, we call back to the server to continue the action.
-        if (promptChoice) {
-            actions.resolveAbilityStep(
-                promptChoice.choosingState.sourceInstanceId,
-                promptChoice.choosingState.initialTargetId,
-                promptChoice.phase,
-                promptChoice.choosingState
-            );
-        }
-    };
 
     // Show a loading/error state if something is wrong
     if (!gameState || !myPlayerState || !opponentState) {
@@ -312,7 +191,7 @@ const GamePageContent = ({ initialGameState, isSpectator }) => {
                         gameState={gameState}
                         activeDragData={activeDragData}
                         promptChoice={promptChoice}
-                        isSpectator={isSpectator} 
+                        isSpectator={isSpectator}
                     />
                 </div>
 
@@ -346,20 +225,10 @@ const GamePage = () => {
     const initialGameState = location.state?.initialGameState;
     const initialIsSpectator = location.state?.isSpectator || false;
 
-    // Use the game engine here to get actions and player states
-    const {
-        actions,
-        myPlayerState,
-        opponentState,
-        promptChoice,
-        isSpectator,
-        ...rest
-    } = useGameEngine(initialGameState, initialIsSpectator);
-
-    return (
-        <GameUIProvider actions={actions} myPlayerState={myPlayerState} opponentState={opponentState} promptChoice={promptChoice}>
-            <GamePageContent initialGameState={initialGameState} isSpectator={isSpectator} />
-        </GameUIProvider>
+     return (
+        <GameProvider initialGameState={initialGameState} isSpectator={initialIsSpectator}>
+            <GamePageContent />
+        </GameProvider>
     );
 };
 

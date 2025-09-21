@@ -2,11 +2,11 @@
 import React from 'react';
 import PlayerArea from './PlayerArea';
 import DeckPile from './DeckPile';
-import { useGameUI } from '../../context/GameUIContext';
 import InspectorPanel from './InspectorPanel';
+import { useGame } from '../../context/GameContext';
 
 const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState, activeDragData, promptChoice, isSpectator = false }) => {
-    const { selectedCard, onCardClick, onActionClick, targeting, cancelAllActions, resolutionState, setResolutionState } = useGameUI();
+    const { selectedCard, onCardClick, onActionClick, targeting, cancelAllActions, resolutionState, setResolutionState } = useGame();
 
     // --- Highlight valid targets if promptChoice is active ---
     const getTargetingForPrompt = () => {
