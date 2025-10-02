@@ -96,26 +96,6 @@ const GamePageContent = ({ }) => {
 
     }, [promptChoice])
 
-    useEffect(() => {
-        if (promptChoice?.uiAction === 'WAIT_FOR_ANIMATION') {
-            console.log("Game is paused, waiting for animation to complete...");
-            const animationDuration = 3500;
-
-            const timer = setTimeout(() => {
-                console.log("Animation time is up. Resolving prompt.");
-                actions.resolveAbilityStep(
-                    promptChoice.choosingState.sourceInstanceId,
-                    promptChoice.choosingState.initialTargetId,
-                    promptChoice.phase,
-                    promptChoice.choosingState
-                );
-            }, animationDuration);
-
-            return () => clearTimeout(timer);
-        }
-    }, [promptChoice, actions]);
-
-
     // --- Debugging: Log targeting state ---
     useEffect(() => {
         console.log('Targeting State:', targeting);
@@ -169,6 +149,7 @@ const GamePageContent = ({ }) => {
                 {animation?.type === 'COIN_FLIP' && (
                     <CoinFlipAnimation
                         result={animation.result}
+                        desiredOutcome={animation.desiredOutcome}
                         onAnimationEnd={handleAnimationComplete}
                     />
                 )}

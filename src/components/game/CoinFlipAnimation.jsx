@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import './CoinFlip.css';
 
-const CoinFlipAnimation = ({ result, onAnimationEnd }) => {
+const CoinFlipAnimation = ({ result, desiredOutcome, onAnimationEnd }) => {
 
     useEffect(() => {
         // The CSS animation will last 3.5 seconds. This timer just tells
@@ -15,8 +15,16 @@ const CoinFlipAnimation = ({ result, onAnimationEnd }) => {
         return () => clearTimeout(endTimer);
     }, [onAnimationEnd]);
 
+    const capitalize = (s) => s && s.charAt(0).toUpperCase() + s.slice(1);
+
     return (
         <div className="coin-flip-overlay">
+             {desiredOutcome && (
+                <div className="desired-outcome">
+                    Aiming For {capitalize(desiredOutcome)}
+                </div>
+            )}
+
             <div className="scene">
                 {/* We apply the 'heads' or 'tails' class from the very beginning.
                     The CSS will use this to determine the final landing spot. */}
