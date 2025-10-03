@@ -35,32 +35,12 @@ const DraggableCard = ({ card, cardHandIndex, canPerformAction }) => {
 };
 
 const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction, promptChoice, isSpectator  }) => {
-    const { isHandOpen, setIsHandOpen, targeting, setTargeting, actions } = useGame();
+    const game = useGame();
+    if (!game) return null; // Guard: context might not be available during mount/re-render
+    const { isHandOpen, setIsHandOpen, targeting, setTargeting, actions } = game;
 
-    // --- Multi-phase targeting logic ---
-    const handleCardDrop = (card, initialTarget) => {
-        actions.playItemCard(
-            card.cardHandIndex ?? cards.findIndex(c => c.id === card.id),
-            initialTarget,
-            1,
-            null,
-            (response) => {
-                console.log('Ender Pearl response:', response);
-                if (response.choosingPhase) {
-                    setTargeting({
-                        isTargeting: true,
-                        card,
-                        phase: response.phase,
-                        validTargets: response.validTargets,
-                        chosenTargets: [initialTarget],
-                        cancelable: true
-                    });
-                } else {
-                    setTargeting({ isTargeting: false });
-                }
-            }
-        );
-    };
+    // PlayerHand uses the shared `actions.playItemCard` from context via drag handling
+    // in `GameContext.handleDragEnd`. No local duplicate handler is required here.
 
     // --- Cancel button logic ---
     const handleCancel = () => {
@@ -96,12 +76,11 @@ const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction, promptChoic
                     {cards.length > 0 ? (
                         cards.map((card, index) => (
                             <DraggableCard
-                                key={`${card.id}-${index}`}
-                                card={card}
-                                cardHandIndex={index}
-                                canPerformAction={canPerformAction}
-                                onDrop={handleCardDrop}
-                            />
+                                    key={`${card.id}-${index}`}
+                                    card={card}
+                                    cardHandIndex={index}
+                                    canPerformAction={canPerformAction}
+                                />
                         ))
                     ) : (
                         <div className="text-center w-full text-gray-400 p-8">Your hand is empty.</div>

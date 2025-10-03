@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { canDrop } from '../utils/dropValidation';
 import toast from 'react-hot-toast';
 import { useGameEngine } from '../hooks/useGameEngine';
 
@@ -74,14 +75,41 @@ export const GameProvider = ({ children, initialGameState, isSpectator }) => {
       if (targetCard) openInspector(targetCard);
       return;
     }
-    if (draggedCard?.cardType === 'Item') {
+  if (draggedCard?.cardType === 'Item') {
       const parts = dropZoneId.split('-');
       const target = {
         playerId: parts[0] === 'my' ? myPlayerState.socketId : opponentState.socketId,
         zone: parts[1],
         index: parts[2] !== undefined ? parseInt(parts[2]) : null,
       };
-      actions.playItemCard(instanceId, target);
+
+      // Validate the drop using shared logic
+      const ownerPlayerState = parts[0] === 'my' ? myPlayerState : opponentState;
+      const playerPrefix = parts[0]; // 'my' or 'opponent'
+      const isAllowed = canDrop({ draggedCard, zone: parts[1], ownerPlayerState, playerPrefix, gameState, index: target.index });
+      if (!isAllowed) {
+        console.debug('Rejected drop (client):', { draggedCard, dropZoneId, parts, isAllowed, ownerPlayerState });
+        showToast('Invalid drop: that item cannot be used there.', { style: 'error' });
+        return; // Reject the drop client-side
+      }
+
+      // Defensive extra checks: ensure slot actually exists for attachments
+      if (parts[1] === 'bench') {
+        if (!ownerPlayerState || !Array.isArray(ownerPlayerState.bench) || !ownerPlayerState.bench[target.index]) {
+          return; // bench slot empty - reject
+        }
+      }
+      if (parts[1] === 'active') {
+        if (!ownerPlayerState || !ownerPlayerState.activeCard) {
+          return; // active slot empty - reject
+        }
+      }
+
+  console.debug('Sending playItemCard to server', { instanceId, target });
+  // Close any open action menus / targeting state before emitting the action
+  cancelAllActions();
+  closeInspector();
+  actions.playItemCard(instanceId, target);
       return;
     }
     if (gameState.phase === 'setup' && dropZoneId === 'my-active') {
@@ -157,10 +185,22 @@ export const GameProvider = ({ children, initialGameState, isSpectator }) => {
   }, [actions, resolutionState, opponentState, cancelAllActions, openInspector]);
 
   const promptMessage = useMemo(() => {
-    if (resolutionState.isActive) return "End-of-Turn Actions";
-    if (targeting.isTargeting && targeting.action?.title) return targeting.action.title;
-    if (promptChoice?.title) return promptChoice.title;
-    return null;
+   // 1. If we are actively targeting something, that's the most important message.
+    if (targeting.isTargeting && targeting.action?.title) {
+        return targeting.action.title;
+    }
+    
+    // 2. If the server sent a specific prompt (like for Satonix), show that.
+    if (promptChoice?.title) {
+        return promptChoice.title;
+    }
+
+    // 3. As a fallback, if we're in the resolution phase but not targeting yet, show the general message.
+    if (resolutionState.isActive) {
+        return "End-of-Turn Actions";
+    }
+
+    return null; // Otherwise, show nothing.
   }, [resolutionState.isActive, targeting, promptChoice]);
 
 

@@ -6,6 +6,7 @@ import DeckPile from './DeckPile';
 import { useDroppable } from '@dnd-kit/core';
 import Card from '../Card';
 import { useGame } from '../../context/GameContext';
+import { canDrop } from '../../utils/dropValidation';
 
 const PlayerArea = ({
     playerState,
@@ -21,6 +22,14 @@ const PlayerArea = ({
     const playerPrefix = isOpponent ? 'opponent' : 'my';
 
     const validTargets = promptChoice?.validTargets || targeting.action?.validTargets || [];
+
+    // Helper: returns true if card (by instanceId) is included in validTargets
+    const isInstanceIdTargetable = (cardInstanceId) => {
+        if (!cardInstanceId) return false;
+        if (Array.isArray(validTargets) && validTargets.includes(cardInstanceId)) return true;
+        // If validTargets contains declarative strings like 'my_bench', keep previous behavior
+        return false;
+    }
 
     const handleDiscardClick = () => {
         // Only open if there are cards to see
@@ -41,38 +50,23 @@ const PlayerArea = ({
             const droppableId = isOpponent ? `opponent-bench-${index}` : `my-bench-${index}`;
             const { isOver, setNodeRef } = useDroppable({
                 id: droppableId,
-                disabled: isOpponent,
             });
-            const isValidDrop = () => {
-                if (!activeDragData) return false;
-                const draggedCard = activeDragData.cardData;
-
-                // Case 1: Dragging an Item (like Frog)
-                if (draggedCard?.cardType === 'Item') {
-                    // It's a valid drop IF the slot is OCCUPIED by a player card
-                    // AND this bench slot is in the item's validTargets.
-                    if (!card) return false; // Must have a card to attach to.
-
-                    const targetString = `${playerPrefix}_bench`; // e.g., 'my_bench'
-                    return draggedCard.validTargets?.includes(targetString);
-                }
-
-                // Case 2: Dragging a Player card
-                if (draggedCard?.cardType === 'Player') {
-                    // It's a valid drop IF the slot is EMPTY.
-                    return !card;
-                }
-
-                // Default: not a valid drop
-                return false;
-            };
-            const canDrop = isOver && isValidDrop();
+            const isValidDrop = () => canDrop({
+                draggedCard: activeDragData?.cardData,
+                zone: 'bench',
+                ownerPlayerState: playerState,
+                playerPrefix: isOpponent ? 'opponent' : 'my',
+                gameState,
+                index
+            });
+            const canDropSlot = isOver && isValidDrop();
             const isInvalidDrop = isOver && !isValidDrop();
 
             // console.log(`Targetable`)
             // console.log(`Card: ${card?.instanceId}, Valid Targets: ${validTargets}`);
             // --- Targetable logic: use both targeting and validTargets ---
-            const isTargetable = validTargets.includes(card?.instanceId);
+            // Prefer instanceId based validTargets. If none, fall back to declarative matching by using the targeting.action or promptChoice.
+            const isTargetable = isInstanceIdTargetable(card?.instanceId) || (Array.isArray(validTargets) && validTargets.includes(`${playerPrefix}_bench`));
 
 
             return (
@@ -80,7 +74,7 @@ const PlayerArea = ({
                     key={index}
                     ref={setNodeRef}
                     className={`transition-all duration-150 w-32 aspect-[3/4] mx-auto 
-                        ${canDrop ? 'bg-green-500/40 scale-105' : ''}
+                        ${canDropSlot ? 'bg-green-500/40 scale-105' : ''}
                         ${isInvalidDrop ? 'bg-red-500/40' : ''}
                     `}
                 >
@@ -106,56 +100,38 @@ const PlayerArea = ({
     // --- Droppable Hook Call #1: For the ACTIVE SLOT ---
     const { isOver: isActiveSlotOver, setNodeRef: setActiveSlotRef } = useDroppable({
         id: isOpponent ? 'opponent-active' : 'my-active',
-        // disabled: isOpponent,
     });
 
     // --- Droppable Hook Call #2: For the SUPPORT SLOT ---
     const { isOver: isSupportSlotOver, setNodeRef: setSupportSlotRef } = useDroppable({
         id: isOpponent ? 'opponent-support' : 'my-support',
-        // disabled: isOpponent,
     });
 
     // --- Validation Logic for ACTIVE SLOT ---
-    const isValidDropOnActive = () => {
-        if (!activeDragData || !gameState) return false;
-        const draggedCard = activeDragData.cardData;
-
-        // Case 1: Dragging an Item (like Invisibility Potion)
-        if (draggedCard?.cardType === 'Item') {
-            // It's a valid drop IF the active slot has a card 
-            // AND this active slot is in the item's validTargets.
-            if (!activeCard) return false; // Must have a card to attach to.
-
-            // This correctly checks 'my_active' vs 'opponent_active'
-            const targetString = `${playerPrefix}_active`;
-            return draggedCard.validTargets?.includes(targetString);
-        }
-
-        // Case 2: Dragging a Player card
-        if (draggedCard?.cardType === 'Player') {
-            // It's a valid drop IF it's the setup phase AND you haven't chosen a card yet.
-            console.log(`Player Active Card Droppable  ${gameState.phase === 'setup' || (gameState?.phase === 'main_phase' && gameState?.activePlayerId === playerState.socketId && !playerState.activeCard)}`)
-            return gameState.phase === 'setup' || (gameState?.phase === 'main_phase' && gameState?.activePlayerId === playerState.socketId && !playerState.activeCard);
-        }
-
-        // Default: not a valid drop
-        return false;
-    };
-    const canDropOnActive = isActiveSlotOver && isValidDropOnActive();
+    const isValidDropOnActive = () => canDrop({
+        draggedCard: activeDragData?.cardData,
+        zone: 'active',
+        ownerPlayerState: playerState,
+        playerPrefix: isOpponent ? 'opponent' : 'my',
+        gameState,
+    });
+    const canDropSlotOnActive = isActiveSlotOver && isValidDropOnActive();
     const isInvalidDropOnActive = isActiveSlotOver && !isValidDropOnActive();
 
     // --- Validation Logic for SUPPORT SLOT ---
-    const isValidDropOnSupport = () => {
-        if (!activeDragData || !gameState) return false;
-        const draggedCard = activeDragData.cardData;
-        return gameState.phase === 'main_phase' && (draggedCard?.cardType === 'Base' || draggedCard?.cardType === 'Team');
-    };
-    const canDropOnSupport = isSupportSlotOver && isValidDropOnSupport();
+    const isValidDropOnSupport = () => canDrop({
+        draggedCard: activeDragData?.cardData,
+        zone: 'support',
+        ownerPlayerState: playerState,
+        playerPrefix: isOpponent ? 'opponent' : 'my',
+        gameState,
+    });
+    const canDropSlotOnSupport = isSupportSlotOver && isValidDropOnSupport();
     const isInvalidDropOnSupport = isSupportSlotOver && !isValidDropOnSupport();
 
     const mainRowOrder = isOpponent ? 'flex-row' : 'flex-row-reverse';
 
-    const isActiveCardTargetable = validTargets.includes(activeCard?.instanceId);
+    const isActiveCardTargetable = isInstanceIdTargetable(activeCard?.instanceId) || (Array.isArray(validTargets) && validTargets.includes(`${playerPrefix}_active`));
 
     return (
         <div className="relative w-full h-full mx-auto overflow-visible">
@@ -190,7 +166,7 @@ const PlayerArea = ({
                         <div
                             ref={setActiveSlotRef}
                             className={`w-32 aspect-[3/4] rounded-lg transition-all duration-150
-                                ${canDropOnActive ? 'bg-green-500/40 scale-105' : ''}
+                                ${canDropSlotOnActive ? 'bg-green-500/40 scale-105' : ''}
                                 ${isInvalidDropOnActive ? 'bg-red-500/40' : ''}
                             `}
                         >
@@ -226,7 +202,7 @@ const PlayerArea = ({
                             onClick={() => supportCard && openInspector(supportCard)}
                             className={`w-32 aspect-[3/4] rounded-lg transition-all duration-150
         ${supportCard ? 'cursor-pointer' : ''} 
-        ${canDropOnSupport ? 'bg-green-500/40 scale-105' : ''}
+    ${canDropSlotOnSupport ? 'bg-green-500/40 scale-105' : ''}
         ${isInvalidDropOnSupport ? 'bg-red-500/40' : ''}
     `}
                         >
