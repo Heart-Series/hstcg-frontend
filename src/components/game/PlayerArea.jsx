@@ -7,11 +7,12 @@ import { useDroppable } from '@dnd-kit/core';
 import Card from '../Card';
 import { useGame } from '../../context/GameContext';
 import { canDrop } from '../../utils/dropValidation';
+import PlayerInfoPanel from './PlayerInfoPanel';
 
 const PlayerArea = ({
     playerState,
     isOpponent = false,
-    isSpectator= false, 
+    isSpectator = false,
     actions,
     gameState,
     activeDragData,
@@ -136,15 +137,11 @@ const PlayerArea = ({
     return (
         <div className="relative w-full h-full mx-auto overflow-visible">
             {/* Points Indicator */}
-            <div
-                className={`absolute ${isOpponent ? 'top-2 right-2' : 'bottom-2 right-2'} bg-yellow-600 text-white rounded-lg px-3 py-1 text-sm font-bold shadow-md z-20`}
-                style={{ pointerEvents: 'none' }}   
-            >
-                 {isSpectator && (
-                    <span className="block text-xs font-normal opacity-80">{playerState?.username}</span>
-                )}
-                Points: {playerState?.points ?? 0}
-            </div>
+            <PlayerInfoPanel
+                playerState={playerState}
+                isOpponent={isOpponent}
+                isSpectator={isSpectator}
+            />
 
             <div className={`flex flex-row w-full h-full gap-4 px-2`}>
                 <div className="content-center">
@@ -170,30 +167,30 @@ const PlayerArea = ({
                                 ${isInvalidDropOnActive ? 'bg-red-500/40' : ''}
                             `}
                         >
-                                {activeCard
-                                    ? (
-                                        // During the setup phase, the first active card chosen should be face-down
-                                        // for the opponent only until the game actually starts. The owner should
-                                        // still see their own active card.
-                                        (gameState?.phase === 'setup' && isOpponent) ? (
-                                            <div className="w-full h-full rounded-lg overflow-hidden cursor-default select-none">
-                                                <img src="/images/card_back.png" alt="Face Down" className="w-full h-full object-cover rounded-lg" />
-                                            </div>
-                                        ) : (
-                                            <CardOnField
-                                                cardData={activeCard}
-                                                droppableId={`${playerPrefix}-active`}
-                                                activeDragData={activeDragData}
-                                                gameState={gameState}
-                                                isSelected={selectedCardId === activeCard.instanceId}
-                                                isTargetable={isActiveCardTargetable}
-                                                onCardClick={(cardData) => onCardClick(cardData, isActiveCardTargetable)}
-                                                onActionClick={onActionClick}
-                                            />
-                                        )
+                            {activeCard
+                                ? (
+                                    // During the setup phase, the first active card chosen should be face-down
+                                    // for the opponent only until the game actually starts. The owner should
+                                    // still see their own active card.
+                                    (gameState?.phase === 'setup' && isOpponent) ? (
+                                        <div className="w-full h-full rounded-lg overflow-hidden cursor-default select-none">
+                                            <img src="/images/card_back.png" alt="Face Down" className="w-full h-full object-cover rounded-lg" />
+                                        </div>
+                                    ) : (
+                                        <CardOnField
+                                            cardData={activeCard}
+                                            droppableId={`${playerPrefix}-active`}
+                                            activeDragData={activeDragData}
+                                            gameState={gameState}
+                                            isSelected={selectedCardId === activeCard.instanceId}
+                                            isTargetable={isActiveCardTargetable}
+                                            onCardClick={(cardData) => onCardClick(cardData, isActiveCardTargetable)}
+                                            onActionClick={onActionClick}
+                                        />
                                     )
-                                    : <CardSlot />
-                                }
+                                )
+                                : <CardSlot />
+                            }
                         </div>
 
                         {/* Support Card - positioned to the right */}
@@ -211,11 +208,11 @@ const PlayerArea = ({
 
                     </div>
                 </div>
-                 <div className="content-center" onClick={handleDiscardClick}>
-                    <DeckPile 
-                        type="Discard" 
-                        count={discard.length} 
-                        cardData={discard[0]} 
+                <div className="content-center" onClick={handleDiscardClick}>
+                    <DeckPile
+                        type="Discard"
+                        count={discard.length}
+                        cardData={discard[0]}
                     />
                 </div>
             </div>

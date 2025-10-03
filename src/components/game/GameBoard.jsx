@@ -4,9 +4,11 @@ import PlayerArea from './PlayerArea';
 import DeckPile from './DeckPile';
 import InspectorPanel from './InspectorPanel';
 import { useGame } from '../../context/GameContext';
+import SpectatorCount from './SpectatorCount';
 
 const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState, activeDragData, promptChoice, isSpectator = false }) => {
     const { selectedCard, onCardClick, onActionClick, targeting, cancelAllActions, resolutionState, setResolutionState } = useGame();
+    const spectatorCount = gameState?.spectators?.length ?? 0;
 
     // --- Highlight valid targets if promptChoice is active ---
     const getTargetingForPrompt = () => {
@@ -29,12 +31,12 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
         }
     };
 
-     const getTurnText = () => {
+    const getTurnText = () => {
         // Highest priority: Setup Phase
         if (gameState.phase === 'setup') {
             return "Setup Phase";
         }
-        
+
         // Next: Spectator View
         if (isSpectator) {
             const activePlayer = Object.values(gameState.players).find(p => p.socketId === gameState.activePlayerId);
@@ -51,28 +53,31 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
             <InspectorPanel />
             {/* --- Turn Indicator: Always Top Left --- */}
             <div
-                className="absolute top-4 left-4 z-30 bg-slate-700 bg-opacity-90 rounded-lg shadow-lg px-4 py-2 flex flex-col items-start"
-                style={{
-                    maxWidth: '180px',
-                    minWidth: '120px',
-                    wordBreak: 'break-word',
-                }}
+                className="absolute top-4 left-4 z-30 bg-slate-800 bg-opacity-80 rounded-lg shadow-lg p-3 flex flex-col gap-2"
+                style={{ pointerEvents: 'auto' }} // Ensure buttons inside are clickable
             >
-                <h2 className="text-md font-bold uppercase tracking-widest text-white mb-1">
-                    {getTurnText()}
-                </h2>
-                <p className="text-sm text-whitet-100 -mono">
-                    Turn {gameState.turn}
-                </p>
+                <div className="flex flex-col gap-1">
+                    <h2 className="text-md font-bold uppercase tracking-widest text-white">
+                        {getTurnText()}
+                    </h2>
+                    <div className="text-sm text-gray-200 font-mono flex items-center gap-4">
+                        <span>Turn {gameState.turn}</span>
+                        <SpectatorCount count={spectatorCount} />
+                    </div>
+                </div>
+
                 {isMyTurn && (
-                    <button
-                        className="absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-2 bg-red-600 text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-all duration-300 z-40"
-                        onClick={handleTurnButtonClick}
-                    >
-                        {resolutionState.isActive ? 'Finish Turn' : 'End Turn'}
-                    </button>
+                    <div className="mt-2 w-full">
+                        <button
+                            className="w-full px-4 py-2 bg-red-800 text-white font-bold rounded-md shadow-md hover:bg-red-700 transition-colors duration-200"
+                            onClick={handleTurnButtonClick}
+                        >
+                            {resolutionState.isActive ? 'Finish Turn' : 'End Turn'}
+                        </button>
+                    </div>
                 )}
             </div>
+
 
             {/* Opponent's Area (rendered in reverse) */}
             <div className="flex-1 flex items-end justify-center w-full">

@@ -114,6 +114,12 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
         // socket.on('game:effectActivated', handleEffectActivated);
 
         return () => {
+            // If we were spectating, inform the server that we stopped so they can
+            // immediately remove us from the spectator list instead of waiting for a disconnect.
+            try {
+                if (isSpectatorMode && socket) socket.emit('spectate:stop', { gameId });
+            } catch (e) { /* ignore */ }
+
             socket.off('game:showToast', handleShowToast);
             socket.off('game:updated', handleGameUpdate);
             socket.off('game:error', handleGameError);
@@ -122,7 +128,7 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
             socket.off('spectate:start', handleSpectateStart);
             // socket.off('game:effectActivated', handleEffectActivated);
         };
-    }, [socket, showToast, openCardPileViewer, showAnimation, setResolutionState, gameId]);
+    }, [socket, showToast, openCardPileViewer, showAnimation, setResolutionState, gameId, isSpectatorMode]);
 
     // --- Unified Player Action ---
     const performAction = useCallback((type, payload = {}) => {
