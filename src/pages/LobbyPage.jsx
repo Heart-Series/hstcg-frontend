@@ -121,7 +121,7 @@ const LobbyPage = () => {
                 {/* Player 1 (Me) */}
                 <div className="bg-blue-50 rounded-lg p-6 flex flex-col items-center">
                     <h2 className="text-xl font-semibold text-blue-900 mb-2">
-                        {me.username} <span className={me.isReady ? "text-green-600" : "text-red-600"}>{me.isReady ? "(Ready)" : "(Not Ready)"}</span>
+                        {me?.username} <span className={me.isReady ? "text-green-600" : "text-red-600"}>{me.isReady ? "(Ready)" : "(Not Ready)"}</span>
                     </h2>
                     <select
                         onChange={(e) => handleSelectDeck(e.target.value)}
@@ -138,7 +138,7 @@ const LobbyPage = () => {
                 <div className="bg-gray-50 rounded-lg p-6 flex flex-col items-center">
                     {opponent ? (
                         <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                            {opponent.username} <span className={opponent.isReady ? "text-green-600" : "text-red-600"}>{opponent.isReady ? "(Ready)" : "(Not Ready)"}</span>
+                            {opponent?.username} <span className={opponent.isReady ? "text-green-600" : "text-red-600"}>{opponent.isReady ? "(Ready)" : "(Not Ready)"}</span>
                         </h2>
                     ) : (
                         <h2 className="text-xl font-semibold text-gray-500 mb-2">Waiting for opponent...</h2>

@@ -71,12 +71,13 @@ function App() {
                 toastOptions={{
                     // Define default options
                     className: '',
-                    duration: 5000,
+                    duration: 4000,
                     style: {
                         background: '#363636',
                         color: '#fff',
                     },
                 }}
+                toastLimit={4}
             />
             <nav style={navStyle}>
                 <Link to="/" style={linkStyle}>Home</Link>

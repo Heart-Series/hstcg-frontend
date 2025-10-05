@@ -5,11 +5,13 @@ import { useAuth } from './useAuth';
 import { useParams } from 'react-router-dom';
 import { useMemo } from 'react';
 import { useRef } from 'react';
+import toast from 'react-hot-toast';
 
 export const useGameEngine = (initialGameState, isSpectator = false, callbacks = {}) => {
     const [gameState, setGameState] = useState(initialGameState);
     const [isSpectatorMode, setIsSpectatorMode] = useState(isSpectator);
     const [promptChoice, setPromptChoice] = useState(null);
+    const [gameOverData, setGameOverData] = useState(null);
     const socket = useSocket();
     const { user } = useAuth();
     const { gameId } = useParams();
@@ -98,19 +100,20 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
             setIsSpectatorMode(true);
         };
 
+        const handleGameOver = (data) => {
+            console.log("Received game:over", data);
+            toast.dismiss();
+            setGameOverData(data); // Store the winner and final state
+        };
+
         socket.on('game:playAnimation', handlePlayAnimation);
-        // // Prevent duplicate toast handlers if the hook is mounted more than once
-        // try {
-        //     socket.off('game:showToast');
-        // } catch (e) {
-        //     // ignore if socket.off isn't available or errors
-        // }
         socket.on('game:showToast', handleShowToast);
         socket.on('game:updated', handleGameUpdate);
         socket.on('game:error', handleGameError);
         socket.on('game:promptChoice', handlePromptChoice);
         socket.on('game:showReveal', handleShowReveal);
         socket.on('spectate:start', handleSpectateStart);
+        socket.on('game:over', handleGameOver);
         // socket.on('game:effectActivated', handleEffectActivated);
 
         return () => {
@@ -126,6 +129,7 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
             socket.off('game:promptChoice', handlePromptChoice);
             socket.off('game:showReveal', handleShowReveal);
             socket.off('spectate:start', handleSpectateStart);
+            socket.off('game:over', handleGameOver);
             // socket.off('game:effectActivated', handleEffectActivated);
         };
     }, [socket, showToast, openCardPileViewer, showAnimation, setResolutionState, gameId, isSpectatorMode]);
@@ -226,12 +230,13 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
         (gameState?.phase === 'action_resolution_phase' && gameState?.playerInResolution === socket?.id);
 
 
-    // A new variable to determine if the player can interact with their hand.
+    // A new variable to determine if the playgameStateer can interact with their hand.
     const canPerformAction =
         (gameState?.phase === 'setup' && !myPlayerState?.hasChosenActive) || isMyTurn;
 
     return {
         gameState,
+        gameOverData,
         myPlayerState,
         opponentState,
         isMyTurn,

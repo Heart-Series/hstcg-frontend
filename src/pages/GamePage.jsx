@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // Import all the "dumb" UI components
 import GameBoard from '../components/game/GameBoard';
@@ -14,6 +14,7 @@ import PromptDisplay from '../components/game/PromptDisplay';
 import CoinFlipAnimation from '../components/game/CoinFlipAnimation';
 import { useTexture } from '@react-three/drei';
 import { GameProvider, useGame } from '../context/GameContext';
+import GameOverScreen from '../components/game/GameOverScreen';
 // import GameOverScreen from '../components/game/GameOverScreen'; // For the future
 
 const GamePageContent = ({ }) => {
@@ -26,7 +27,7 @@ const GamePageContent = ({ }) => {
     }, []);
 
     const {
-        gameState, myPlayerState, opponentState, isSpectator,
+        gameState, gameOverData, myPlayerState, opponentState, isSpectator,
         actions, promptChoice, isMyTurn, canPerformAction,
         animation, hideAnimation,
         viewingCardPile, openCardPileViewer, closeCardPileViewer,
@@ -36,6 +37,7 @@ const GamePageContent = ({ }) => {
         handleDragStart, handleDragEnd,
         targeting, setTargeting, openInspector
     } = useGame();
+    const navigate = useNavigate();
 
     const handleAnimationComplete = () => {
         // This is called by the animation component when it's done.
@@ -105,28 +107,6 @@ const GamePageContent = ({ }) => {
         return <div>Loading Game...</div>; // Or a more robust loading screen
     }
 
-    // Check for a winner to show the game over screen
-    if (gameState.winner) {
-        return (
-            <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white">
-                <h1 className="text-4xl font-bold mb-4">Game Over!</h1>
-                <h2 className="text-2xl mb-2">{gameState.players[gameState.winner]?.username || 'Unknown'} wins!</h2>
-                <div className="mt-4 p-4 bg-gray-800 rounded-lg shadow-lg max-w-xl w-full">
-                    <h3 className="text-lg font-semibold mb-2">Game Log:</h3>
-                    <ul className="max-h-64 overflow-y-auto text-sm">
-                        {gameState.log.map((entry, idx) => (
-                            <li key={idx} className="mb-1">{entry}</li>
-                        ))}
-                    </ul>
-                </div>
-                <button className="mt-8 px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300" onClick={() => window.location.href = '/lobbies'}>
-                    Return to Lobby
-                </button>
-            </div>
-        );
-    }
-
-
     return (
         <DndContext
             collisionDetection={closestCenter}
@@ -136,6 +116,13 @@ const GamePageContent = ({ }) => {
         >
             <div className="h-[calc(100vh-5rem)] overflow-hidden bg-gray-800 text-white flex flex-col">
 
+                {gameOverData && (
+                    <GameOverScreen
+                        gameOverData={gameOverData}
+                        onReturn={() => navigate('/lobbies')}
+                        isSpectator={isSpectator}
+                    />
+                )}
 
                 {viewingCardPile && (
                     <CardPileViewer
@@ -185,7 +172,7 @@ const GamePageContent = ({ }) => {
                     canPerformAction={canPerformAction}
                     promptChoice={promptChoice}
                     isSpectator={isSpectator}
-                />      
+                />
             </div>
 
             <DragOverlay>
