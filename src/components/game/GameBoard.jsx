@@ -5,6 +5,8 @@ import DeckPile from './DeckPile';
 import InspectorPanel from './InspectorPanel';
 import { useGame } from '../../context/GameContext';
 import SpectatorCount from './SpectatorCount';
+import { FaBookOpen } from 'react-icons/fa';
+import GameLog from './GameLog';
 
 const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState, activeDragData, promptChoice, isSpectator = false }) => {
     const { selectedCard, onCardClick, onActionClick, targeting, cancelAllActions, resolutionState, setResolutionState } = useGame();
@@ -47,6 +49,8 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
         return isMyTurn ? "Your Turn" : "Opponent's Turn";
     };
 
+    const [showLog, setShowLog] = React.useState(false);
+
     // Pass validTargets to PlayerArea for contextual highlighting
     return (
         <div className="flex-grow flex flex-col justify-center items-center gap-2 h-full py-2 relative" onClick={cancelAllActions}>
@@ -77,6 +81,51 @@ const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState,
                     </div>
                 )}
             </div>
+
+            {/* Game Logs button, bottom left */}
+            <div
+                className="absolute bottom-4 left-4 z-10 bg-slate-800 bg-opacity-80 rounded-lg shadow-lg"
+                style={{ pointerEvents: 'auto' }}
+                onClick={(e) => e.stopPropagation()} // Stop propagation to not trigger cancelAllActions
+            >
+                <button
+                    aria-label="Toggle game log"
+                    className="flex items-center gap-2 px-4 py-3 text-sm text-white rounded-lg hover:bg-slate-700 transition"
+                    onClick={() => setShowLog(true)}
+                >
+                    <FaBookOpen />
+                    Game Log
+                </button>
+            </div>
+
+            {showLog && (
+                <>
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 z-40 bg-black opacity-50"
+                        onClick={() => setShowLog(false)}
+                    />
+                    {/* Modal Panel */}
+                    <div
+                        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[36rem] max-w-lg bg-slate-800 rounded-lg shadow-2xl overflow-hidden z-50 border border-slate-600"
+                        role="dialog"
+                        aria-modal="true"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+                            <h3 className="text-md font-bold uppercase tracking-widest text-white flex items-center gap-2">
+                                <FaBookOpen /> Game Log
+                            </h3>
+                            <button className="text-gray-400 hover:text-white" onClick={() => setShowLog(false)}>
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div className="p-4 h-96 overflow-y-auto">
+                            <GameLog logs={gameState.log || []} players={gameState.players || {}} />
+                        </div>
+                    </div>
+                </>
+            )}
 
 
             {/* Opponent's Area (rendered in reverse) */}

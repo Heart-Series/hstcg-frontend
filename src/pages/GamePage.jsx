@@ -14,7 +14,6 @@ import PromptDisplay from '../components/game/PromptDisplay';
 import CoinFlipAnimation from '../components/game/CoinFlipAnimation';
 import { useTexture } from '@react-three/drei';
 import { GameProvider, useGame } from '../context/GameContext';
-// import GameLog from '../components/game/GameLog';
 // import GameOverScreen from '../components/game/GameOverScreen'; // For the future
 
 const GamePageContent = ({ }) => {
@@ -36,7 +35,7 @@ const GamePageContent = ({ }) => {
         isHandOpen, setIsHandOpen,
         handleDragStart, handleDragEnd,
         targeting, setTargeting, openInspector
-    } = useGame();    
+    } = useGame();
 
     const handleAnimationComplete = () => {
         // This is called by the animation component when it's done.
@@ -186,7 +185,7 @@ const GamePageContent = ({ }) => {
                     canPerformAction={canPerformAction}
                     promptChoice={promptChoice}
                     isSpectator={isSpectator}
-                />
+                />      
             </div>
 
             <DragOverlay>
@@ -206,7 +205,7 @@ const GamePage = () => {
     const initialGameState = location.state?.initialGameState;
     const initialIsSpectator = location.state?.isSpectator || false;
 
-     return (
+    return (
         <GameProvider initialGameState={initialGameState} isSpectator={initialIsSpectator}>
             <GamePageContent />
         </GameProvider>
