@@ -39,9 +39,9 @@ export function canDrop({ draggedCard, zone, ownerPlayerState, playerPrefix, gam
             const hostId = host?.instanceId || null;
             return validTargetsAllows(hostId, targetString('bench'));
         }
-        // If dragging a Player card, bench slot must be empty
+        // If dragging a Player card, bench slot must be empty, game must not be in a setup phase, and it should be your own bench 
         if (draggedCard.cardType === 'Player') {
-            return !slotOccupied;
+            return !slotOccupied && gameState?.phase !== 'setup' && playerPrefix === 'my';
         }
         return false;
     }
@@ -55,8 +55,8 @@ export function canDrop({ draggedCard, zone, ownerPlayerState, playerPrefix, gam
             return validTargetsAllows(hostId, targetString('active'));
         }
         if (draggedCard.cardType === 'Player') {
-            // Allow play to active during setup OR when it's the player's main phase and their active is empty
-            return gameState?.phase === 'setup' || (gameState?.phase === 'main_phase' && gameState?.activePlayerId === ownerPlayerState?.socketId && !ownerPlayerState?.activeCard);
+            // Allow play to active during setup OR when it's the player's main phase and their active is empty. Do not allow to place on opponent active. 
+            return (gameState?.phase === 'setup' || (gameState?.phase === 'main_phase' && gameState?.activePlayerId === ownerPlayerState?.socketId && !ownerPlayerState?.activeCard)) && playerPrefix === 'my';
         }
         return false;
     }
