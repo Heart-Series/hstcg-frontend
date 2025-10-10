@@ -1,5 +1,5 @@
 // src/pages/LobbyPage.jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import { useAuth } from '../hooks/useAuth';
@@ -121,7 +121,7 @@ const LobbyPage = () => {
                 {/* Player 1 (Me) */}
                 <div className="bg-blue-50 rounded-lg p-6 flex flex-col items-center">
                     <h2 className="text-xl font-semibold text-blue-900 mb-2">
-                        {me?.username} <span className={me.isReady ? "text-green-600" : "text-red-600"}>{me.isReady ? "(Ready)" : "(Not Ready)"}</span>
+                        {me?.username} <span className={me?.isReady ? "text-green-600" : "text-red-600"}>{me?.isReady ? "(Ready)" : "(Not Ready)"}</span>
                     </h2>
                     <select
                         onChange={(e) => handleSelectDeck(e.target.value)}

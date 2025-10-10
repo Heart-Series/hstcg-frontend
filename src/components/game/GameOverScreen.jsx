@@ -7,14 +7,18 @@ import GameLog from './GameLog';
 const GameOverScreen = ({ gameOverData, onReturn, isSpectator }) => {
   const { user } = useAuth();
 
-  console.log(`Is Spectator : ${isSpectator}`);
-  
   if (!gameOverData) return null;  
 
   const { winner: winnerId, gameState:  finalState } = gameOverData;
-  const winnerData = Object.values(finalState.players).find(p => p.socketId == winnerId || p.userId == winnerId);
+  
+  // The winner ID should be a socket ID, so first try to find by socketId
+  // If that fails, try by userId as a fallback
+  let winnerData = Object.values(finalState.players).find(p => p.socketId === winnerId);
+  if (!winnerData) {
+    winnerData = Object.values(finalState.players).find(p => p.userId === winnerId);
+  }
 
-  const isWinner = winnerData?.userId == user.userId;
+  const isWinner = winnerData?.userId?.toString() === user?.userId?.toString();
 
   let bannerText = '';
   let bannerColor = '';
@@ -27,8 +31,8 @@ const GameOverScreen = ({ gameOverData, onReturn, isSpectator }) => {
     bannerColor = isWinner ? 'bg-green-500' : 'bg-red-700';
   }
 
-  const myFinalState = Object.values(finalState.players).find(p => p.userId == user.userId);
-  const opponentFinalState = Object.values(finalState.players).find(p => p.userId != user.userId);
+  const myFinalState = Object.values(finalState.players).find(p => p.userId?.toString() === user?.userId?.toString());
+  const opponentFinalState = Object.values(finalState.players).find(p => p.userId?.toString() !== user?.userId?.toString());
 
   return (
     <>

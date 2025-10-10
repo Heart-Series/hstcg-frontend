@@ -40,6 +40,13 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
         const handleGameUpdate = (newGameState) => {
             console.log("Received game:updated", newGameState);
 
+            // Don't update game state if we already have game over data
+            // to prevent race conditions
+            if (gameOverData) {
+                console.log("Ignoring game:updated because game is already over");
+                return;
+            }
+
             // Starter selection is authoritative from the server. The frontend
             // will not auto-pick a starter anymore. The server should emit
             // a `game:updated` with `activePlayerId` set, and may also emit
@@ -134,7 +141,7 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
             socket.off('game:over', handleGameOver);
             // socket.off('game:effectActivated', handleEffectActivated);
         };
-    }, [socket, showToast, openCardPileViewer, showAnimation, setResolutionState, gameId, isSpectatorMode]);
+    }, [socket, showToast, openCardPileViewer, showAnimation, setResolutionState, gameId, isSpectatorMode, gameOverData]);
 
     // --- Unified Player Action ---
     const performAction = useCallback((type, payload = {}) => {

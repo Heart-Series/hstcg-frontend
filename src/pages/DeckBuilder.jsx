@@ -226,7 +226,7 @@ const DeckBuilder = () => {
 
 
             {/* --- Bottom Panel: The Collection --- */}
-            <section className="flex-grow flex flex-col p-3 overflow-hidden bg-gray-50" style={{ minHeight: '55vh' }}>
+            <section className="flex-grow flex flex-col p-3 overflow-hidden bg-gray-50" style={{ minHeight: '5car5vh' }}>
                 <CollectionControls 
                     filters={filters} 
                     setFilters={setFilters} 
