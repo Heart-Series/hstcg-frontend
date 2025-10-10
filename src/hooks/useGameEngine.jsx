@@ -121,7 +121,9 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
             // immediately remove us from the spectator list instead of waiting for a disconnect.
             try {
                 if (isSpectatorMode && socket) socket.emit('spectate:stop', { gameId });
-            } catch (e) { /* ignore */ }
+            } catch (e) { 
+                console.error("Error emitting spectate:stop", e);
+            }
 
             socket.off('game:showToast', handleShowToast);
             socket.off('game:updated', handleGameUpdate);
@@ -156,6 +158,10 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
     const resolvePhase = useCallback(() => {
         performAction('resolvePhase');
     }, [performAction]);
+
+    const clearPrompt = useCallback(() => {
+        setPromptChoice(null);
+    }, []);
 
     const endTurn = useCallback(() => {
         performAction('endTurn');
@@ -257,6 +263,7 @@ export const useGameEngine = (initialGameState, isSpectator = false, callbacks =
             activateBenchCard,
             performResolutionAction,
             resolvePhase,
+            clearPrompt,
         },
     };
 };

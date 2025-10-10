@@ -35,7 +35,7 @@ export const GameProvider = ({ children, initialGameState, isSpectator }) => {
   const showAnimation = useCallback((animationData) => setAnimation(animationData), []);
   const hideAnimation = useCallback(() => setAnimation(null), []);
   const openCardPileViewer = useCallback((title, cards) => setViewingCardPile({ title, cards }), []);
-  const closeCardPileViewer = useCallback(() => setViewingCardPile(null), []);
+  
   const openInspector = useCallback((cardData) => setInspectorCardData(cardData), []);
   const cancelAllActions = useCallback(() => {
     setSelectedCardId(null);
@@ -48,6 +48,14 @@ export const GameProvider = ({ children, initialGameState, isSpectator }) => {
     showToast, setResolutionState, openCardPileViewer, showAnimation,
   });
   const { actions, myPlayerState, opponentState, promptChoice, gameState } = gameEngineData;
+
+  const closeCardPileViewer = useCallback(() => {
+    setViewingCardPile(null);
+    // If there's a prompt with no valid choices (view-only prompt), clear it
+    if (promptChoice && (!promptChoice.validChoices || promptChoice.validChoices.length === 0)) {
+      actions.clearPrompt();
+    }
+  }, [promptChoice, actions]);
 
   // === PART 4: The Complex Event Handlers (The "Bridge") ===
   const handleDragStart = useCallback((event) => {

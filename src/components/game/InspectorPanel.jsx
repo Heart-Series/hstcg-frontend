@@ -82,7 +82,11 @@ const InspectorPanel = () => {
 
                     </div>
                     <div className="mt-4 text-sm text-gray-400">
-                        <p>HP: {inspectorCardData.hp}</p>
+                        {inspectorCardData.cardType === 'Player' && inspectorCardData.maxHp ? (
+                            <p>HP: {inspectorCardData.hp} / {inspectorCardData.maxHp}</p>
+                        ) : (
+                            <p>HP: {inspectorCardData.hp}</p>
+                        )}
                         {/* Add any other stats you want to show here */}
                     </div>
 
