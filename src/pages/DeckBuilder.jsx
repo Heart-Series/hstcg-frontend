@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { useDebounce } from '../hooks/useDebounce';
-import { fetchDeckById, fetchMyCollection, updateDeck } from '../api';
+import { fetchDeckById, fetchMyCollection, updateDeck, fetchAllPacks } from '../api';
 import Card from '../components/Card';
 import ValidationErrors from '../components/ValidationErrors';
-import { PencilIcon } from '@heroicons/react/24/solid';
 import CollectionControls from '../components/CollectionControls';
 
 
@@ -17,6 +15,7 @@ const DeckBuilder = () => {
     const [userCollection, setUserCollection] = useState({});
     const [deck, setDeck] = useState(null);
     const [validation, setValidation] = useState(null);
+    const [allPacks, setAllPacks] = useState([]);
 
     // UI & Filter State
     const [loading, setLoading] = useState(true);
@@ -26,17 +25,19 @@ const DeckBuilder = () => {
         name: '',
         rank: [],       // e.g., [1, 3]
         cardType: [],   // e.g., ['Player', 'Item']
+        pack: [],       // e.g., ['th', 'hbr']
     });
     // Debouncing and Auth
     const debouncedDeck = useDebounce(deck, 750);
     // ... (fetch and autosave useEffects remain largely the same)
 
-    // --- Data Fetching Effect (remains the same) ---
+    // --- Data Fetching Effect ---
     useEffect(() => {
         Promise.all([
             fetchDeckById(deckId),
-            fetchMyCollection()
-        ]).then(([deckData, collectionData]) => {
+            fetchMyCollection(),
+            fetchAllPacks()
+        ]).then(([deckData, collectionData, packsData]) => {
             if (deckData.deck) {
                 setDeck(deckData.deck);
                 setValidation(deckData.validation);
@@ -46,6 +47,7 @@ const DeckBuilder = () => {
                 return acc;
             }, {});
             setUserCollection(collectionMap);
+            setAllPacks(packsData || []);
             setLoading(false);
         });
     }, [deckId]);
@@ -63,6 +65,24 @@ const DeckBuilder = () => {
     }, [debouncedDeck, deckId, loading]);
 
 
+    // --- Memoized Available Pack Options ---
+    const availablePackOptions = useMemo(() => {
+        return allPacks.map(pack => ({
+            value: pack.packId || pack.name.toLowerCase(),
+            label: pack.name
+        }));
+    }, [allPacks]);
+
+    // --- Memoized Pack-to-Cards Mapping ---
+    const packCardMapping = useMemo(() => {
+        const mapping = {};
+        allPacks.forEach(pack => {
+            const packKey = pack.packId || pack.name.toLowerCase();
+            mapping[packKey] = new Set(pack.cardIds || []);
+        });
+        return mapping;
+    }, [allPacks]);
+
     // --- Memoized Filtering and Sorting Logic ---
     const filteredAndSortedCollection = useMemo(() => {
         const deckCardCounts = deck?.cards.reduce((acc, id) => {
@@ -70,26 +90,42 @@ const DeckBuilder = () => {
             return acc;
         }, {}) || {};
 
+        // Helper function to find which pack(s) contain a card
+        const getPacksForCard = (cardId) => {
+            const packs = [];
+            Object.entries(packCardMapping).forEach(([packKey, cardSet]) => {
+                if (cardSet.has(cardId)) {
+                    packs.push(packKey);
+                }
+            });
+            return packs;
+        };
+
         let available = Object.values(userCollection)
             .map(card => {
                 const inDeck = deckCardCounts[card.id] || 0;
-                return { ...card, availableQuantity: card.quantity - inDeck };
+                return { 
+                    ...card, 
+                    availableQuantity: card.quantity - inDeck,
+                    packs: getPacksForCard(card.id)
+                };
             })
             .filter(card => card.availableQuantity > 0);
 
         // Apply filters
         if (filters.rank.length > 0) {
-            // Only filter player cards by rank
-            available = available.filter(card => card.cardType === 'Player' && card.rank == filters.rank);
-        }
-        if (filters.rank.length > 0) {
             // Keep the card if its rank is included in the filter array
-            console.log(filters.rank)
             available = available.filter(card => filters.rank.includes(card.rank));
         }
         if (filters.cardType.length > 0) {
             // Keep the card if its type is included in the filter array
             available = available.filter(card => filters.cardType.includes(card.cardType));
+        }
+        if (filters.pack.length > 0) {
+            // Keep the card if any of its packs are included in the filter array
+            available = available.filter(card => 
+                card.packs.some(pack => filters.pack.includes(pack))
+            );
         }
         if (filters.name) {
             available = available.filter(card => card.name.toLowerCase().includes(filters.name.toLowerCase()));
@@ -100,11 +136,17 @@ const DeckBuilder = () => {
             if (sort === 'name') return a.name.localeCompare(b.name);
             if (sort === 'rank') return (b.rank || 0) - (a.rank || 0);
             if (sort === 'type') return a.cardType.localeCompare(b.cardType);
+            if (sort === 'pack') {
+                // Sort by first pack if card is in multiple packs
+                const aFirstPack = a.packs[0] || '';
+                const bFirstPack = b.packs[0] || '';
+                return aFirstPack.localeCompare(bFirstPack);
+            }
             return 0;
         });
 
         return available;
-    }, [userCollection, deck, filters, sort]);
+    }, [userCollection, deck, filters, sort, packCardMapping]);
 
     // --- Event Handlers (remain the same) ---
     const handleAddCard = (cardId) => {
@@ -113,15 +155,7 @@ const DeckBuilder = () => {
     const handleRemoveCard = (indexToRemove) => {
         setDeck(d => ({ ...d, cards: d.cards.filter((_, i) => i !== indexToRemove) }));
     };
-    const handleNameChange = (e) => {
-        setDeck(d => ({ ...d, name: e.target.value }));
-    };
-    const handleDone = () => {
-        if (validation?.state === 'draft') {
-            alert("Warning: This deck is not legal for play.\n\nReasons:\n" + validation.errors.join("\n"));
-        }
-        navigate('/decks');
-    };
+
 
 
     // --- Render Logic ---
@@ -186,14 +220,20 @@ const DeckBuilder = () => {
                 )}
             </main>
 
-            <section className="my-3 mx-1">
+            <section className="my-2 mx-1">
                 <ValidationErrors validation={validation} />
             </section>
 
 
             {/* --- Bottom Panel: The Collection --- */}
-            <section className="flex-grow flex flex-col p-4 overflow-hidden bg-gray-50">
-                <CollectionControls filters={filters} setFilters={setFilters} sort={sort} setSort={setSort} />
+            <section className="flex-grow flex flex-col p-3 overflow-hidden bg-gray-50" style={{ minHeight: '55vh' }}>
+                <CollectionControls 
+                    filters={filters} 
+                    setFilters={setFilters} 
+                    sort={sort} 
+                    setSort={setSort} 
+                    packOptions={availablePackOptions}
+                />
                 <div className="flex-grow overflow-y-auto pr-2 pt-5"> {/* Added padding-right for scrollbar */}
                     <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-4">
                         {filteredAndSortedCollection.map(card => (

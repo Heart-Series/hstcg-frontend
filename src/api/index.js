@@ -80,3 +80,20 @@ export const deleteDeckById = async (deckId) => {
         method: 'DELETE'
     }).then(res => res.json());
 };
+
+export const fetchAllPacks = async () => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/packs`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Failed to fetch packs:", error);
+        return [];
+    }
+};
+
+export const getPackImageUrl = (packId) => {
+    return `${API_BASE_URL}/packs/image/${packId}`;
+};
