@@ -1,25 +1,33 @@
 // src/components/game/CoinFlipAnimation.jsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import './CoinFlip.css';
 
 const CoinFlipAnimation = ({ result, desiredOutcome, onAnimationEnd }) => {
+
+    const onAnimationEndRef = useRef(onAnimationEnd);
+
+    useEffect(() => {
+        onAnimationEndRef.current = onAnimationEnd;
+    }, [onAnimationEnd]);
 
     useEffect(() => {
         // The CSS animation will last 3.5 seconds. This timer just tells
         // the parent component to unmount us when the animation is over.
         const endTimer = setTimeout(() => {
-            onAnimationEnd();
+             if (onAnimationEndRef.current) {
+                onAnimationEndRef.current();
+            }
         }, 3500);
 
         return () => clearTimeout(endTimer);
-    }, [onAnimationEnd]);
+    }, []);
 
     const capitalize = (s) => s && s.charAt(0).toUpperCase() + s.slice(1);
 
     return (
         <div className="coin-flip-overlay">
-             {desiredOutcome && (
+            {desiredOutcome && (
                 <div className="desired-outcome">
                     Aiming For {capitalize(desiredOutcome)}
                 </div>

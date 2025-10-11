@@ -1,6 +1,6 @@
 // src/pages/GamePage.jsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -17,7 +17,7 @@ import { GameProvider, useGame } from '../context/GameContext';
 import GameOverScreen from '../components/game/GameOverScreen';
 // import GameOverScreen from '../components/game/GameOverScreen'; // For the future
 
-const GamePageContent = ({ }) => {
+const GamePageContent = () => {
 
     useEffect(() => {
         // This tells Three.js to start downloading these textures in the background.
