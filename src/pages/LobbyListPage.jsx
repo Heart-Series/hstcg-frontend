@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import { useAuth } from '../hooks/useAuth';
+import LobbyCard from '../components/LobbyCard';
 
 const LobbyListPage = () => {
     const [publicLobbies, setPublicLobbies] = useState([]);
@@ -20,8 +21,35 @@ const LobbyListPage = () => {
             navigate(`/lobby/${lobbyData.id}`);
         };
 
-        socket.on('lobby:created', handleLobbyCreated);
+        // Real-time public lobby update handlers
+        const handlePublicLobbyCreated = (lobbyData) => {
+            setPublicLobbies(prev => {
+                // Check if lobby already exists to prevent duplicates
+                const exists = prev.some(lobby => lobby.id === lobbyData.id);
+                if (exists) return prev;
+                return [...prev, lobbyData];
+            });
+        };
 
+        const handlePublicLobbyUpdated = (lobbyData) => {
+            setPublicLobbies(prev => 
+                prev.map(lobby => 
+                    lobby.id === lobbyData.id ? { ...lobby, ...lobbyData } : lobby
+                )
+            );
+        };
+
+        const handlePublicLobbyRemoved = ({ id }) => {
+            setPublicLobbies(prev => prev.filter(lobby => lobby.id !== id));
+        };
+
+        // Register socket listeners
+        socket.on('lobby:created', handleLobbyCreated);
+        socket.on('publicLobby:created', handlePublicLobbyCreated);
+        socket.on('publicLobby:updated', handlePublicLobbyUpdated);
+        socket.on('publicLobby:removed', handlePublicLobbyRemoved);
+
+        // Initial fetch of public lobbies
         const fetchLobbies = async () => {
             try {
                 const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/lobbies`);
@@ -36,14 +64,12 @@ const LobbyListPage = () => {
 
         fetchLobbies();
 
-        // Optionally, poll every 5 seconds for updates
-        const interval = setInterval(fetchLobbies, 5000);
-
-        // Crucially, we clean up this specific listener when the component unmounts.
+        // Cleanup listeners when component unmounts
         return () => {
             socket.off('lobby:created', handleLobbyCreated);
-            clearInterval(interval);
-
+            socket.off('publicLobby:created', handlePublicLobbyCreated);
+            socket.off('publicLobby:updated', handlePublicLobbyUpdated);
+            socket.off('publicLobby:removed', handlePublicLobbyRemoved);
         };
     }, [socket, navigate]);
 
@@ -133,10 +159,11 @@ const LobbyListPage = () => {
             </div>
 
             <h2 className="text-2xl font-bold mb-4">Public Lobbies</h2>
-            {/* This is where you would map over the publicLobbies state */}
-            <div>
+            <div className="space-y-3">
                 {publicLobbies.length > 0 ? (
-                    publicLobbies.map(lobby => <div key={lobby.id}>{lobby.id}</div>)
+                    publicLobbies.map(lobby => (
+                        <LobbyCard key={lobby.id} lobby={lobby} />
+                    ))
                 ) : (
                     <p className="text-gray-500">No public lobbies available right now.</p>
                 )}

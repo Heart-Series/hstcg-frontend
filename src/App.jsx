@@ -14,6 +14,8 @@ import LobbyPage from './pages/LobbyPage';
 import GamePage     from './pages/GamePage';        
 
 import ErrorBoundary from './components/ErrorBoundary';
+import { LobbyProvider } from './context/LobbyContext';
+import LobbyStatusContainer from './components/LobbyStatusContainer';
 
 import { Toaster } from 'react-hot-toast';
 
@@ -67,6 +69,7 @@ function App() {
     return (
         // Using HashRouter is the easiest way to ensure compatibility with GitHub Pages
         <HashRouter>
+            <LobbyProvider>
               <Toaster
                 position="top-center"
                 toastOptions={{
@@ -148,6 +151,10 @@ function App() {
                     {/* e.g., <Route path="/collection" element={<MyCollection />} /> */}
                 </Routes>
             </main>
+            
+            {/* Lobby Status Widget */}
+            <LobbyStatusContainer />
+            </LobbyProvider>
         </HashRouter>
     );
 }

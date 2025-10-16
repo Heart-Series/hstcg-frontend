@@ -49,10 +49,16 @@ const LobbyPage = () => {
             }
         };
 
+        const handleLobbyDisbanded = ({ reason }) => {
+            alert(`Lobby disbanded: ${reason}`);
+            navigate('/lobbies');
+        };
+
         socket.on('lobby:updated', handleLobbyUpdated);
         socket.on('lobby:error', handleLobbyError);
         socket.on('game:starting', handleGameStarting);
         socket.on('spectate:start', handleSpectateStart);
+        socket.on('lobby:disbanded', handleLobbyDisbanded);
         console.log('Registered game:starting listener');
 
         // Cleanup function runs only when the component unmounts for good
@@ -65,6 +71,7 @@ const LobbyPage = () => {
             socket.off('lobby:error', handleLobbyError);
             socket.off('game:starting', handleGameStarting);
             socket.off('spectate:start', handleSpectateStart);
+            socket.off('lobby:disbanded', handleLobbyDisbanded);
         };
     }, [socket, navigate, lobbyId]); // This is stable.
 
@@ -145,7 +152,8 @@ const LobbyPage = () => {
                     )}
                 </div>
             </div>
-            <div className="flex flex-col md:flex-row gap-4 justify-center">
+            {/* Top Row - Ready and Start Game buttons */}
+            <div className="flex flex-col md:flex-row gap-4 justify-center mb-4">
                 <button
                     onClick={handleReadyClick}
                     disabled={!me.selectedDeckId}
@@ -168,21 +176,36 @@ const LobbyPage = () => {
                         Start Game
                     </button>
                 )}
-
             </div>
-            {isHost && (
-                <div className="flex justify-center mb-4 mt-2">
+            
+            {/* Bottom Row - Privacy toggle and Leave Lobby */}
+            <div className="flex flex-col md:flex-row gap-4 justify-center">
+                {isHost && (
                     <button
                         onClick={handleToggleVisibility}
-                        className={`px-4 py-2 rounded-lg font-bold transition-colors duration-200 ${lobbyData.isPublic
+                        className={`px-6 py-2 rounded-lg font-bold transition-colors duration-200 ${lobbyData.isPublic
                             ? "bg-green-600 hover:bg-green-700 text-white"
                             : "bg-gray-400 hover:bg-gray-500 text-white"
                             }`}
                     >
                         {lobbyData.isPublic ? "Public" : "Private"}
                     </button>
-                </div>
-            )}
+                )}
+                <button
+                    onClick={() => {
+                        if (isHost) {
+                            if (window.confirm('Are you sure you want to disband this lobby? This will remove all players and delete the lobby.')) {
+                                socket.emit('lobby:disband', { lobbyId });
+                            }
+                        } else {
+                            socket.emit('lobby:leave', { lobbyId });
+                        }
+                    }}
+                    className="px-6 py-2 rounded-lg font-bold transition-colors duration-200 bg-red-600 hover:bg-red-700 text-white"
+                >
+                    Leave Lobby
+                </button>
+            </div>
         </div>
     );
 };
