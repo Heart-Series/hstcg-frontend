@@ -31,6 +31,7 @@ const navStyle = {
     padding: '1rem',
     display: 'flex',
     gap: '1rem',
+    alignItems: 'center',
 };
 
 const linkStyle = {
@@ -86,15 +87,49 @@ function App() {
                 {user && <Link to="/decks" style={linkStyle}>Decks</Link>}
                   {user && <Link to="/lobbies" style={linkStyle}>Lobbies</Link>} {/* <-- NEW LINK */}
 
-                <div style={{ marginLeft: 'auto' }}>
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     {loading ? <span style={linkStyle}>Loading...</span> :
                         user ? (
                             <>
                                 <span style={linkStyle}>Welcome, {user.name}!</span>
-                                <button onClick={handleLogout} style={linkStyle}>Logout</button>
+                                <button 
+                                    onClick={handleLogout} 
+                                    style={{
+                                        backgroundColor: '#dc3545',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '500',
+                                        transition: 'background-color 0.3s ease'
+                                    }}
+                                    onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
+                                    onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
+                                >
+                                    Logout
+                                </button>
                             </>
                         ) : (
-                            <a href={`${import.meta.env.VITE_API_BASE_URL}/auth/discord`} style={linkStyle}>Login with Discord</a>
+                            <a 
+                                href={`${import.meta.env.VITE_API_BASE_URL}/auth/discord`} 
+                                style={{
+                                    backgroundColor: '#6c757d',
+                                    color: 'white',
+                                    textDecoration: 'none',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem',
+                                    fontWeight: '500',
+                                    transition: 'background-color 0.3s ease',
+                                    display: 'inline-block'
+                                }}
+                                onMouseOver={(e) => e.target.style.backgroundColor = '#5a6268'}
+                                onMouseOut={(e) => e.target.style.backgroundColor = '#6c757d'}
+                            >
+                                Login with Discord
+                            </a>
                         )}
                 </div>
             </nav>
