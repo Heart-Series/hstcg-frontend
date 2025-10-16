@@ -82,7 +82,7 @@ function App() {
             <nav style={navStyle}>
                 <Link to="/" style={linkStyle}>Home</Link>
                 {/* <Link to="/library" style={linkStyle}>Card Library</Link> */}
-                {user && <Link to="/collection" style={linkStyle}>My Collection</Link>}
+                {user && <Link to="/collection" style={linkStyle}>Collection</Link>}
                 {user && <Link to="/decks" style={linkStyle}>Decks</Link>}
                   {user && <Link to="/lobbies" style={linkStyle}>Lobbies</Link>} {/* <-- NEW LINK */}
 
