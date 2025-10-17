@@ -7,6 +7,7 @@ const LobbyContext = createContext();
 
 export const LobbyProvider = ({ children }) => {
     const [currentLobby, setCurrentLobby] = useState(null);
+    const [currentGameId, setCurrentGameId] = useState(null);
     const socket = useSocket();
     const location = useLocation();
 
@@ -19,6 +20,7 @@ export const LobbyProvider = ({ children }) => {
 
         const handleLobbyDisbanded = ({ reason }) => {
             setCurrentLobby(null);
+            setCurrentGameId(null);
             alert(`Lobby disbanded: ${reason}`);
         };
 
@@ -26,34 +28,44 @@ export const LobbyProvider = ({ children }) => {
             // Only clear lobby state for certain errors
             if (message.includes('not found') || message.includes('disbanded')) {
                 setCurrentLobby(null);
+                setCurrentGameId(null);
             }
         };
 
-        const handleGameStarting = () => {
-            // Keep lobby data when game starts so widget still shows
-            // but user can return to lobby if needed
+        const handleGameStarting = ({ gameId }) => {
+            // Track the game ID so we can navigate back to it
+            setCurrentGameId(gameId);
+        };
+
+        const handleGameEnded = () => {
+            // Game ended, clear the game ID
+            setCurrentGameId(null);
         };
 
         socket.on('lobby:updated', handleLobbyUpdated);
         socket.on('lobby:disbanded', handleLobbyDisbanded);
         socket.on('lobby:error', handleLobbyError);
         socket.on('game:starting', handleGameStarting);
+        socket.on('game:ended', handleGameEnded);
 
         return () => {
             socket.off('lobby:updated', handleLobbyUpdated);
             socket.off('lobby:disbanded', handleLobbyDisbanded);
             socket.off('lobby:error', handleLobbyError);
             socket.off('game:starting', handleGameStarting);
+            socket.off('game:ended', handleGameEnded);
         };
     }, [socket]);
 
     const clearLobby = () => {
         setCurrentLobby(null);
+        setCurrentGameId(null);
     };
 
     return (
         <LobbyContext.Provider value={{
             currentLobby,
+            currentGameId,
             setCurrentLobby,
             clearLobby,
             currentPath: location.pathname

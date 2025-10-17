@@ -4,11 +4,12 @@ import { useLobbyContext } from '../context/LobbyContext';
 import LobbyStatus from './LobbyStatus';
 
 const LobbyStatusContainer = () => {
-    const { currentLobby, currentPath } = useLobbyContext();
+    const { currentLobby, currentGameId, currentPath } = useLobbyContext();
     
     return (
         <LobbyStatus 
             lobbyData={currentLobby} 
+            currentGameId={currentGameId}
             currentPath={currentPath} 
         />
     );

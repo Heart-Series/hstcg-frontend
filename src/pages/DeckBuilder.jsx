@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useDebounce } from '../hooks/useDebounce';
-import { fetchDeckById, fetchMyCollection, updateDeck, fetchAllPacks } from '../api';
+import { fetchDeckById, fetchMyCollection, updateDeck, fetchAllPacks, fetchAllCards } from '../api';
 import Card from '../components/Card';
 import ValidationErrors from '../components/ValidationErrors';
 import CollectionControls from '../components/CollectionControls';
@@ -10,6 +10,10 @@ import CollectionControls from '../components/CollectionControls';
 const DeckBuilder = () => {
     const { deckId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    
+    // Check if this is a rental deck (readonly mode)
+    const isReadonly = new URLSearchParams(location.search).get('readonly') === 'true';
 
     // Data State
     const [userCollection, setUserCollection] = useState({});
@@ -33,16 +37,27 @@ const DeckBuilder = () => {
 
     // --- Data Fetching Effect ---
     useEffect(() => {
-        Promise.all([
+        const fetchPromises = [
             fetchDeckById(deckId),
-            fetchMyCollection(),
             fetchAllPacks()
-        ]).then(([deckData, collectionData, packsData]) => {
+        ];
+        
+        // Fetch appropriate card data based on mode
+        if (isReadonly) {
+            fetchPromises.splice(1, 0, fetchAllCards());
+        } else {
+            fetchPromises.splice(1, 0, fetchMyCollection());
+        }
+        
+        Promise.all(fetchPromises).then((results) => {
+            const [deckData, cardData, packsData] = results;
+            
             if (deckData.deck) {
                 setDeck(deckData.deck);
                 setValidation(deckData.validation);
             }
-            const collectionMap = collectionData.reduce((acc, card) => {
+            
+            const collectionMap = cardData.reduce((acc, card) => {
                 acc[card.id] = card;
                 return acc;
             }, {});
@@ -50,7 +65,7 @@ const DeckBuilder = () => {
             setAllPacks(packsData || []);
             setLoading(false);
         });
-    }, [deckId]);
+    }, [deckId, isReadonly]);
 
     // --- Autosave Effect (remains the same) ---
     useEffect(() => {
@@ -150,9 +165,11 @@ const DeckBuilder = () => {
 
     // --- Event Handlers (remain the same) ---
     const handleAddCard = (cardId) => {
+        if (isReadonly) return; // Don't allow changes in readonly mode
         setDeck(d => ({ ...d, cards: [...d.cards, cardId] }));
     };
     const handleRemoveCard = (indexToRemove) => {
+        if (isReadonly) return; // Don't allow changes in readonly mode
         setDeck(d => ({ ...d, cards: d.cards.filter((_, i) => i !== indexToRemove) }));
     };
 
@@ -162,10 +179,68 @@ const DeckBuilder = () => {
     if (loading) return <div>Loading...</div>;
     if (!deck) return <div>Deck not found.</div>;
 
-    const deckCardObjects = deck.cards.map(id => userCollection[id]).filter(Boolean);
+    // Readonly mode for rental decks
+    if (isReadonly) {
+        const deckCardObjects = deck.cards.map(id => userCollection[id]).filter(Boolean);
+        return (
+            <div className="flex flex-col h-full bg-gray-100 font-sans">
+                {/* --- Header for Readonly Mode --- */}
+                <header className="flex-shrink-0 bg-white shadow-md p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-800">{deck.name}</h1>
+                            <div className="flex items-center gap-4 mt-2">
+                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+                                    Starter Deck
+                                </span>
+                                <span className="text-gray-600">{deck.cards.length} cards</span>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => navigate('/decks')} 
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg"
+                        >
+                            Back to Collection
+                        </button>
+                    </div>
+                    
+                    {/* Description */}
+                    {deck.description && (
+                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                            <p className="text-gray-700">{deck.description}</p>
+                        </div>
+                    )}
+                </header>
 
+                {/* --- Deck Cards Display --- */}
+                <main className="flex-1 p-6 overflow-y-auto min-h-0">
+                    <h2 className="text-xl font-semibold text-gray-800 mb-4">Deck Contents</h2>
+                    {deckCardObjects.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                            {deckCardObjects.map((card, index) => {
+                                const occurrence = deck.cards.slice(0, index + 1).filter(id => id === card.id).length;
+                                return (
+                                    <div key={`${card.id}-${occurrence}`} className="transform hover:scale-105 transition-transform duration-200">
+                                        <Card cardData={card} />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="text-center text-gray-500 py-12">
+                            <p className="text-xl">This deck is empty.</p>
+                        </div>
+                    )}
+                </main>
+            </div>
+        );
+    }
+
+    // Regular editing mode
+    const deckCardObjects = deck.cards.map(id => userCollection[id]).filter(Boolean);
+    
     return (
-        <div className="flex flex-col h-screen bg-gray-100 font-sans">
+        <div className="flex flex-col h-full bg-gray-100 font-sans">
             {/* --- Top Bar: Deck Info & Actions --- */}
             <header className="flex-shrink-0 bg-white shadow-md p-3 flex items-center justify-between z-20">
                 <div className="flex items-center gap-2 group">

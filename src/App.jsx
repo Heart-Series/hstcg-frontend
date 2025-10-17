@@ -83,77 +83,79 @@ function App() {
                 }}
                 toastLimit={4}
             />
-            <nav style={navStyle}>
-                <Link to="/" style={linkStyle}>Home</Link>
-                {/* <Link to="/library" style={linkStyle}>Card Library</Link> */}
-                {user && <Link to="/collection" style={linkStyle}>Collection</Link>}
-                {user && <Link to="/decks" style={linkStyle}>Decks</Link>}
-                  {user && <Link to="/lobbies" style={linkStyle}>Lobbies</Link>} {/* <-- NEW LINK */}
+            <div className="h-screen flex flex-col">
+                <nav style={navStyle}>
+                    <Link to="/" style={linkStyle}>Home</Link>
+                    {/* <Link to="/library" style={linkStyle}>Card Library</Link> */}
+                    {user && <Link to="/collection" style={linkStyle}>Collection</Link>}
+                    {user && <Link to="/decks" style={linkStyle}>Decks</Link>}
+                      {user && <Link to="/lobbies" style={linkStyle}>Lobbies</Link>} {/* <-- NEW LINK */}
 
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    {loading ? <span style={linkStyle}>Loading...</span> :
-                        user ? (
-                            <>
-                                <span style={linkStyle}>Welcome, {user.name}!</span>
-                                <button 
-                                    onClick={handleLogout} 
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        {loading ? <span style={linkStyle}>Loading...</span> :
+                            user ? (
+                                <>
+                                    <span style={linkStyle}>Welcome, {user.name}!</span>
+                                    <button 
+                                        onClick={handleLogout} 
+                                        style={{
+                                            backgroundColor: '#dc3545',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '0.5rem 1rem',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '500',
+                                            transition: 'background-color 0.3s ease'
+                                        }}
+                                        onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
+                                        onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
+                                    >
+                                        Logout
+                                    </button>
+                                </>
+                            ) : (
+                                <a 
+                                    href={`${import.meta.env.VITE_API_BASE_URL}/auth/discord`} 
                                     style={{
-                                        backgroundColor: '#dc3545',
+                                        backgroundColor: '#6c757d',
                                         color: 'white',
-                                        border: 'none',
+                                        textDecoration: 'none',
                                         padding: '0.5rem 1rem',
                                         borderRadius: '4px',
-                                        cursor: 'pointer',
                                         fontSize: '0.9rem',
                                         fontWeight: '500',
-                                        transition: 'background-color 0.3s ease'
+                                        transition: 'background-color 0.3s ease',
+                                        display: 'inline-block'
                                     }}
-                                    onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
-                                    onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
+                                    onMouseOver={(e) => e.target.style.backgroundColor = '#5a6268'}
+                                    onMouseOut={(e) => e.target.style.backgroundColor = '#6c757d'}
                                 >
-                                    Logout
-                                </button>
-                            </>
-                        ) : (
-                            <a 
-                                href={`${import.meta.env.VITE_API_BASE_URL}/auth/discord`} 
-                                style={{
-                                    backgroundColor: '#6c757d',
-                                    color: 'white',
-                                    textDecoration: 'none',
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '4px',
-                                    fontSize: '0.9rem',
-                                    fontWeight: '500',
-                                    transition: 'background-color 0.3s ease',
-                                    display: 'inline-block'
-                                }}
-                                onMouseOver={(e) => e.target.style.backgroundColor = '#5a6268'}
-                                onMouseOut={(e) => e.target.style.backgroundColor = '#6c757d'}
-                            >
-                                Login with Discord
-                            </a>
-                        )}
-                </div>
-            </nav>
+                                    Login with Discord
+                                </a>
+                            )}
+                    </div>
+                </nav>
 
-            <main style={{ padding: '1rem' }}>
-                <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    {/* <Route path="/library" element={<CardLibrary />} /> */}
-                    <Route path="/collection" element={<CardCollection />} />
-                    <Route path="/decks" element={<DeckLibrary />} />
-                    <Route path="/decks/:deckId" element={<DeckBuilder />} />
-                    <Route path="/lobbies" element={<LobbyListPage />} />
-                    <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
-                    <Route path="/game/:gameId" element={<ErrorBoundary><GamePage /></ErrorBoundary>} />
-                    {/* You will add more routes here for other pages */}
-                    {/* e.g., <Route path="/collection" element={<MyCollection />} /> */}
-                </Routes>
-            </main>
-            
-            {/* Lobby Status Widget */}
-            <LobbyStatusContainer />
+                <main className="flex-1 overflow-hidden p-4">
+                    <Routes>
+                        <Route path="/" element={<HomePage />} />
+                        {/* <Route path="/library" element={<CardLibrary />} /> */}
+                        <Route path="/collection" element={<CardCollection />} />
+                        <Route path="/decks" element={<DeckLibrary />} />
+                        <Route path="/decks/:deckId" element={<DeckBuilder />} />
+                        <Route path="/lobbies" element={<LobbyListPage />} />
+                        <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
+                        <Route path="/game/:gameId" element={<ErrorBoundary><GamePage /></ErrorBoundary>} />
+                        {/* You will add more routes here for other pages */}
+                        {/* e.g., <Route path="/collection" element={<MyCollection />} /> */}
+                    </Routes>
+                </main>
+                
+                {/* Lobby Status Widget */}
+                <LobbyStatusContainer />
+            </div>
             </LobbyProvider>
         </HashRouter>
     );

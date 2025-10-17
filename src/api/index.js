@@ -54,6 +54,19 @@ export const fetchUserDecks = async () => {
         .then(res => res.json());
 };
 
+export const fetchRentalDecks = async () => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/decks/rental`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Failed to fetch rental decks:", error);
+        return [];
+    }
+};
+
 export const fetchDeckById = async (deckId) => {
     return authFetch(`${API_BASE_URL}/decks/${deckId}`)
         .then(res => res.json());

@@ -3,19 +3,36 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import { useAuth } from '../hooks/useAuth';
-import { fetchUserDecks } from '../api';
+import { fetchUserDecks, fetchRentalDecks } from '../api';
+import DeckDrawer from '../components/DeckDrawer';
 
 const LobbyPage = () => {
     const [lobbyData, setLobbyData] = useState(null);
     const [userDecks, setUserDecks] = useState([]);
+    const [rentalDecks, setRentalDecks] = useState([]);
+    const [isDeckDrawerOpen, setIsDeckDrawerOpen] = useState(false);
     const socket = useSocket();
     const navigate = useNavigate();
     const { user, token } = useAuth();
     const { lobbyId } = useParams();
 
-    // Effect 1: Fetch user's decks once.
+    // Effect 1: Fetch user's decks and rental decks once.
     useEffect(() => {
-        if (token) fetchUserDecks(token).then(setUserDecks);
+        const fetchData = async () => {
+            if (token) {
+                try {
+                    const [userDecksData, rentalDecksData] = await Promise.all([
+                        fetchUserDecks(token),
+                        fetchRentalDecks()
+                    ]);
+                    setUserDecks(userDecksData);
+                    setRentalDecks(rentalDecksData);
+                } catch (err) {
+                    console.error("Error fetching decks:", err);
+                }
+            }
+        };
+        fetchData();
     }, [token]);
 
     // Effect 2: Set up socket event listeners. This should only run ONCE when the socket connects.
@@ -103,6 +120,13 @@ const LobbyPage = () => {
     );
     const isHost = lobbyData?.hostId === socket?.id;
 
+    // Get the currently selected deck info for display (check both user and rental decks)
+    const selectedDeck = useMemo(() => {
+        if (!me?.selectedDeckId) return null;
+        return userDecks.find(d => d._id === me.selectedDeckId) || 
+               rentalDecks.find(d => d._id === me.selectedDeckId);
+    }, [userDecks, rentalDecks, me?.selectedDeckId]);
+
     // --- RENDER LOGIC ---
     if (!lobbyData) {
         // The condition that shows the loading screen
@@ -114,7 +138,10 @@ const LobbyPage = () => {
     }
 
     // --- Event Handlers can now use the stable 'me' variable ---
-    const handleSelectDeck = (deckId) => socket.emit('lobby:selectDeck', { lobbyId, deckId });
+    const handleSelectDeck = (deckId) => {
+        socket.emit('lobby:selectDeck', { lobbyId, deckId });
+        setIsDeckDrawerOpen(false);
+    };
     const handleReadyClick = () => socket.emit('lobby:setReady', { lobbyId, isReady: !me.isReady });
     const handleStartClick = () => socket.emit('lobby:startGame', { lobbyId });
     const handleToggleVisibility = () => {
@@ -130,16 +157,14 @@ const LobbyPage = () => {
                     <h2 className="text-xl font-semibold text-blue-900 mb-2">
                         {me?.username} <span className={me?.isReady ? "text-green-600" : "text-red-600"}>{me?.isReady ? "(Ready)" : "(Not Ready)"}</span>
                     </h2>
-                    <select
-                        onChange={(e) => handleSelectDeck(e.target.value)}
-                        value={me.selectedDeckId || ''}
-                        className="w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-2 focus:ring-blue-500"
+                    
+                    {/* Deck Selection Button */}
+                    <button
+                        onClick={() => setIsDeckDrawerOpen(true)}
+                        className="w-full bg-gray-200 hover:bg-gray-300 text-black border-black-900 border font-bold py-3 px-4 rounded-lg transition-colors duration-200 mb-4"
                     >
-                        <option value="" disabled>Select a Deck</option>
-                        {userDecks.filter(d => d.state === 'play').map(deck => (
-                            <option key={deck._id} value={deck._id}>{deck.name}</option>
-                        ))}
-                    </select>
+                        {selectedDeck ? selectedDeck.name : 'Select Deck'}
+                    </button>
                 </div>
                 {/* Player 2 (Opponent) */}
                 <div className="bg-gray-50 rounded-lg p-6 flex flex-col items-center">
@@ -206,6 +231,13 @@ const LobbyPage = () => {
                     Leave Lobby
                 </button>
             </div>
+
+            {/* Deck Selection Drawer */}
+            <DeckDrawer 
+                isOpen={isDeckDrawerOpen}
+                onClose={() => setIsDeckDrawerOpen(false)}
+                onSelectDeck={handleSelectDeck}
+            />
         </div>
     );
 };

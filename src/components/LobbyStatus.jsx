@@ -4,21 +4,30 @@ import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import { FaChevronUp, FaChevronDown, FaTimes, FaUsers } from 'react-icons/fa';
 
-const LobbyStatus = ({ lobbyData, currentPath }) => {
+const LobbyStatus = ({ lobbyData, currentGameId, currentPath }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const navigate = useNavigate();
     const socket = useSocket();
 
-    // Don't show the widget if we're already on the lobby page
-    if (!lobbyData || currentPath === `/lobby/${lobbyData.id}`) {
+    // Don't show the widget if:
+    // 1. No lobby data
+    // 2. Already on the lobby page 
+    // 3. Already on the game page (hide during games)
+    if (!lobbyData || 
+        currentPath === `/lobby/${lobbyData.id}` ||
+        (currentGameId && currentPath === `/game/${currentGameId}`)) {
         return null;
     }
 
     const isHost = lobbyData.hostId === socket?.id;
     const playerCount = lobbyData.players?.length || 0;
 
-    const handleReturnToLobby = () => {
-        navigate(`/lobby/${lobbyData.id}`);
+    const handleReturn = () => {
+        if (currentGameId) {
+            navigate(`/game/${currentGameId}`);
+        } else {
+            navigate(`/lobby/${lobbyData.id}`);
+        }
     };
 
     const handleLeaveLobby = () => {
@@ -80,7 +89,7 @@ const LobbyStatus = ({ lobbyData, currentPath }) => {
                         marginBottom: '0.75rem' 
                     }}>
                         {playerCount}/2 players
-                        {lobbyData.status === 'in_game' && (
+                        {currentGameId && (
                             <span style={{ color: '#FF9800', marginLeft: '0.5rem' }}>
                                 (In Game)
                             </span>
@@ -93,7 +102,7 @@ const LobbyStatus = ({ lobbyData, currentPath }) => {
                         gap: '0.5rem' 
                     }}>
                         <button
-                            onClick={handleReturnToLobby}
+                            onClick={handleReturn}
                             style={{
                                 padding: '0.5rem',
                                 backgroundColor: '#2196F3',
@@ -105,7 +114,7 @@ const LobbyStatus = ({ lobbyData, currentPath }) => {
                                 fontWeight: 'bold'
                             }}
                         >
-                            Return to Lobby
+                            {currentGameId ? 'Return to Game' : 'Return to Lobby'}
                         </button>
 
                         <button
