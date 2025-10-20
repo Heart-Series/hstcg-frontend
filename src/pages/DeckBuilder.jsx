@@ -301,7 +301,7 @@ const DeckBuilder = () => {
 
 
             {/* --- Bottom Panel: The Collection --- */}
-            <section className="flex-grow flex flex-col p-3 overflow-hidden bg-gray-50" style={{ minHeight: '5car5vh' }}>
+            <section className="flex-grow flex flex-col p-3 overflow-hidden bg-gray-50" style={{ minHeight: '55vh', maxHeight: '55vh' }}>
                 <CollectionControls 
                     filters={filters} 
                     setFilters={setFilters} 
@@ -309,7 +309,7 @@ const DeckBuilder = () => {
                     setSort={setSort} 
                     packOptions={availablePackOptions}
                 />
-                <div className="flex-grow overflow-y-auto pr-2 pt-5"> {/* Added padding-right for scrollbar */}
+                <div className="flex-grow overflow-y-auto overflow-x-hidden pr-2 pt-5"> {/* Added padding-right for scrollbar */}
                     <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-4">
                         {filteredAndSortedCollection.map(card => (
                             <div

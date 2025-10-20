@@ -9,7 +9,7 @@ import { FaBookOpen } from 'react-icons/fa';
 import GameLog from './GameLog';
 
 const GameBoard = ({ myPlayerState, opponentState, isMyTurn, actions, gameState, activeDragData, promptChoice, isSpectator = false }) => {
-    const { selectedCard, onCardClick, onActionClick, targeting, cancelAllActions, resolutionState, setResolutionState } = useGame();
+    const { targeting, cancelAllActions, resolutionState } = useGame();
     const spectatorCount = gameState?.spectators?.length ?? 0;
 
     // --- Highlight valid targets if promptChoice is active ---

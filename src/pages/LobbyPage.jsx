@@ -161,7 +161,7 @@ const LobbyPage = () => {
                     {/* Deck Selection Button */}
                     <button
                         onClick={() => setIsDeckDrawerOpen(true)}
-                        className="w-full bg-gray-200 hover:bg-gray-300 text-black border-black-900 border font-bold py-3 px-4 rounded-lg transition-colors duration-200 mb-4"
+                        className="w-full cursor-pointer bg-gray-200 hover:bg-gray-300 text-black border-black-900 border font-bold py-3 px-4 rounded-lg transition-colors duration-200 mb-4"
                     >
                         {selectedDeck ? selectedDeck.name : 'Select Deck'}
                     </button>

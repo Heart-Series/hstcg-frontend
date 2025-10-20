@@ -16,7 +16,8 @@ const GameLog = ({ logs, players }) => {
   return (
     <div className="text-sm space-y-2">
       {logs.map((log, index) => {
-        const isVisible = log.level === 'public' ||
+        const isVisible = log.level === 'user_friendly' || 
+          log.level === 'public' ||
           (log.level === 'private' && log.metadata?.actingPlayerId === user.userId);
 
         if (!isVisible) {
@@ -39,8 +40,13 @@ const GameLog = ({ logs, players }) => {
           lastTurn = turnNumber;
         }
 
-        // --- Styling for Private Logs ---
-        const logStyle = log.level === 'private' ? 'italic text-gray-500' : 'text-gray-200';
+        // --- Styling for Different Log Types ---
+        let logStyle = 'text-gray-200';
+        if (log.level === 'private') {
+          logStyle = 'italic text-gray-500';
+        } else if (log.level === 'user_friendly') {
+          logStyle = 'text-white'; 
+        }
 
         return (
           <React.Fragment key={index}>

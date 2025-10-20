@@ -1,7 +1,7 @@
 // src/App.jsx
 
 import React, { useEffect } from 'react';
-import { HashRouter, Routes, Route, Link } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 
 // Import your page components
@@ -39,6 +39,29 @@ const navStyle = {
 const linkStyle = {
     color: 'white',
     textDecoration: 'none',
+};
+
+// Component to handle conditional overflow styling
+const AppContent = () => {
+    const location = useLocation();
+    const isDeckBuilder = location.pathname.includes('/decks/') && !location.pathname.endsWith('/decks');
+    
+    return (
+        <main className={`flex-1 p-4 ${isDeckBuilder ? '' : 'overflow-hidden'}`}>
+            <Routes>
+                <Route path="/" element={<HomePage />} />
+                {/* <Route path="/library" element={<CardLibrary />} /> */}
+                <Route path="/collection" element={<CardCollection />} />
+                <Route path="/decks" element={<DeckLibrary />} />
+                <Route path="/decks/:deckId" element={<DeckBuilder />} />
+                <Route path="/lobbies" element={<LobbyListPage />} />
+                <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
+                <Route path="/game/:gameId" element={<ErrorBoundary><GamePage /></ErrorBoundary>} />
+                {/* Can add more routes here for other pages */}
+                {/* e.g., <Route path="/collection" element={<MyCollection />} /> */}
+            </Routes>
+        </main>
+    );
 };
 
 
@@ -138,20 +161,7 @@ function App() {
                     </div>
                 </nav>
 
-                <main className="flex-1 overflow-hidden p-4">
-                    <Routes>
-                        <Route path="/" element={<HomePage />} />
-                        {/* <Route path="/library" element={<CardLibrary />} /> */}
-                        <Route path="/collection" element={<CardCollection />} />
-                        <Route path="/decks" element={<DeckLibrary />} />
-                        <Route path="/decks/:deckId" element={<DeckBuilder />} />
-                        <Route path="/lobbies" element={<LobbyListPage />} />
-                        <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
-                        <Route path="/game/:gameId" element={<ErrorBoundary><GamePage /></ErrorBoundary>} />
-                        {/* You will add more routes here for other pages */}
-                        {/* e.g., <Route path="/collection" element={<MyCollection />} /> */}
-                    </Routes>
-                </main>
+                <AppContent />
                 
                 {/* Lobby Status Widget */}
                 <LobbyStatusContainer />
