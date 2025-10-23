@@ -1,5 +1,5 @@
 // src/components/game/PlayerHand.jsx
-import React, { useState } from 'react';
+import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import Card from '../Card'; 
 import { useGame } from '../../context/GameContext';
@@ -34,10 +34,10 @@ const DraggableCard = ({ card, cardHandIndex, canPerformAction }) => {
     );
 };
 
-const PlayerHand = ({ cards, isMyTurn, onPlayCard, canPerformAction, promptChoice, isSpectator  }) => {
+const PlayerHand = ({ cards, isMyTurn, canPerformAction, isSpectator  }) => {
     const game = useGame();
     if (!game) return null; // Guard: context might not be available during mount/re-render
-    const { isHandOpen, setIsHandOpen, targeting, setTargeting, actions } = game;
+    const { isHandOpen, setIsHandOpen, targeting, setTargeting } = game;
 
     // PlayerHand uses the shared `actions.playItemCard` from context via drag handling
     // in `GameContext.handleDragEnd`. No local duplicate handler is required here.

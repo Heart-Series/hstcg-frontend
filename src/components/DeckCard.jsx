@@ -108,7 +108,6 @@ const DeckCard = ({
             margin: '0.5rem 0 0 0',
             fontSize: '0.875rem',
             color: '#666',
-            fontStyle: 'italic'
           }}>
             {deck.description}
           </p>
