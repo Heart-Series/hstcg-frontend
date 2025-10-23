@@ -110,3 +110,57 @@ export const fetchAllPacks = async () => {
 export const getPackImageUrl = (packId) => {
     return `${API_BASE_URL}/packs/image/${packId}`;
 };
+
+// Admin API functions
+export const fetchAdminStats = async () => {
+    return authFetch(`${API_BASE_URL}/admin/stats`)
+        .then(res => res.json());
+};
+
+export const fetchAllCardsAdmin = async () => {
+    return authFetch(`${API_BASE_URL}/admin/cards`)
+        .then(res => res.json());
+};
+
+export const createCard = async (cardData) => {
+    return authFetch(`${API_BASE_URL}/admin/cards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cardData)
+    }).then(res => res.json());
+};
+
+export const updateCard = async (cardId, cardData) => {
+    return authFetch(`${API_BASE_URL}/admin/cards/${cardId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cardData)
+    }).then(res => res.json());
+};
+
+export const deleteCard = async (cardId) => {
+    return authFetch(`${API_BASE_URL}/admin/cards/${cardId}`, {
+        method: 'DELETE'
+    }).then(res => res.json());
+};
+
+export const fetchAllUsersAdmin = async () => {
+    return authFetch(`${API_BASE_URL}/admin/users`)
+        .then(res => res.json());
+};
+
+export const updateUserAdminStatus = async (userId, isAdmin) => {
+    return authFetch(`${API_BASE_URL}/admin/users/${userId}/admin`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isAdmin })
+    }).then(res => res.json());
+};
+
+export const giveCardsToUser = async (userId, cardId, amount) => {
+    return authFetch(`${API_BASE_URL}/admin/users/${userId}/cards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cardId, amount })
+    }).then(res => res.json());
+};

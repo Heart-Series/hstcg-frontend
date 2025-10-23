@@ -45,7 +45,7 @@ const GameLog = ({ logs, players }) => {
         if (log.level === 'private') {
           logStyle = 'italic text-gray-500';
         } else if (log.level === 'user_friendly') {
-          logStyle = 'text-white'; 
+          logStyle = 'text-white';  // Clean, readable text without bold
         }
 
         return (

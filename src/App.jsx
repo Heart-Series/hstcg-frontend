@@ -11,7 +11,9 @@ import DeckLibrary from './pages/DeckLibrary';
 import DeckBuilder from './pages/DeckBuilder';
 import LobbyListPage from './pages/LobbyListPage';
 import LobbyPage from './pages/LobbyPage';      
-import GamePage     from './pages/GamePage';        
+import GamePage     from './pages/GamePage';
+import AdminCardManager from './pages/AdminCardManager';
+import AdminUserManager from './pages/AdminUserManager';        
 
 import ErrorBoundary from './components/ErrorBoundary';
 import { LobbyProvider } from './context/LobbyContext';
@@ -45,9 +47,10 @@ const linkStyle = {
 const AppContent = () => {
     const location = useLocation();
     const isDeckBuilder = location.pathname.includes('/decks/') && !location.pathname.endsWith('/decks');
+    const isAdminPage = location.pathname.startsWith('/admin');
     
     return (
-        <main className={`flex-1 p-4 ${isDeckBuilder ? '' : 'overflow-hidden'}`}>
+        <main className={`flex-1 p-4 ${isDeckBuilder || isAdminPage ? '' : 'overflow-hidden'}`}>
             <Routes>
                 <Route path="/" element={<HomePage />} />
                 {/* <Route path="/library" element={<CardLibrary />} /> */}
@@ -57,6 +60,9 @@ const AppContent = () => {
                 <Route path="/lobbies" element={<LobbyListPage />} />
                 <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
                 <Route path="/game/:gameId" element={<ErrorBoundary><GamePage /></ErrorBoundary>} />
+                {/* Admin routes */}
+                <Route path="/admin/cards" element={<AdminCardManager />} />
+                <Route path="/admin/users" element={<AdminUserManager />} />
                 {/* Can add more routes here for other pages */}
                 {/* e.g., <Route path="/collection" element={<MyCollection />} /> */}
             </Routes>
@@ -113,6 +119,15 @@ function App() {
                     {user && <Link to="/collection" style={linkStyle}>Collection</Link>}
                     {user && <Link to="/decks" style={linkStyle}>Decks</Link>}
                       {user && <Link to="/lobbies" style={linkStyle}>Lobbies</Link>} {/* <-- NEW LINK */}
+                    
+                    {/* Admin Links */}
+                    {user?.isAdmin && (
+                        <>
+                            <span style={{ color: '#ffc107', margin: '0 0.5rem' }}>|</span>
+                            <Link to="/admin/cards" style={{ ...linkStyle, color: '#ffc107' }}>Cards</Link>
+                            <Link to="/admin/users" style={{ ...linkStyle, color: '#ffc107' }}>Users</Link>
+                        </>
+                    )}
 
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         {loading ? <span style={linkStyle}>Loading...</span> :
