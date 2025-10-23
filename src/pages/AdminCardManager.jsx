@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { fetchAllPacks } from '../api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import AdminCardModal from '../components/AdminCardModal';
 
 const AdminCardManager = () => {
   const [cards, setCards] = useState([]);
@@ -126,7 +127,9 @@ const AdminCardManager = () => {
 
       const { card } = await response.json();
       setCards([...cards, card]);
-      setShowCreateForm(false);
+  setShowCreateForm(false);
+  // Return created card for callers that may upload images immediately
+  return { card };
     } catch (err) {
       alert(`Error creating card: ${err.message}`);
     }
@@ -491,9 +494,10 @@ const AdminCardManager = () => {
         ))}
       </div>
 
-      {/* Edit Modal */}
+      {/* Edit/Create Modal (shared component) */}
       {editingCard && (
-        <CardEditModal
+        <AdminCardModal
+          mode="edit"
           card={editingCard}
           onSave={handleUpdateCard}
           onCancel={() => setEditingCard(null)}
@@ -502,11 +506,13 @@ const AdminCardManager = () => {
         />
       )}
 
-      {/* Create Modal */}
       {showCreateForm && (
-        <CardCreateModal
+        <AdminCardModal
+          mode="create"
           onCreate={handleCreateCard}
           onCancel={() => setShowCreateForm(false)}
+          cards={cards}
+          setCards={setCards}
         />
       )}
     </div>
@@ -697,447 +703,6 @@ const CardItem = ({ card, onEdit, onCardUpdate, onImageStatus }) => {
   );
 };
 
-// Modal for editing cards
-const CardEditModal = ({ card, onSave, onCancel, cards, setCards }) => {
-  const [formData, setFormData] = useState({
-    name: card.name || '', // Use original name, not display name
-    cardType: card.cardType || '',
-    hp: card.hp || '',
-    attack: card.attack || '',
-    effect: card.effect || '',
-    weapon: card.weapon || '',
-    season: card.season || 'th',
-    team: card.team || ''
-    // Explicitly exclude image and other unwanted fields
-  });
-
-  const [selectedSeason, setSelectedSeason] = useState(card.season || 'th');
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-
-  const seasonTeams = {
-    'th': [
-      "Cherry Outpost",
-      "Border Gang",
-      "Easter Islanders",
-      "The Parrot Hut",
-    ],
-    'hbr': [
-      "Archaeologists",
-      "Better Parrot Hut",
-      "Villagers",
-      "Vikings",
-      "Walmart",
-    ],
-    'hl': [
-      "Elementalists",
-      "Fungi",
-      "Mountain Mates",
-      "Panda Lookout",
-      "The Boys"
-    ],
-    'hbt': [] // Add teams for hbt if needed
-  };
-
-  const handleSeasonChange = (season) => {
-    setSelectedSeason(season);
-    setFormData(prev => ({
-      ...prev,
-      season: season,
-      team: '' // Reset team when season changes
-    }));
-  };
-
-  const getTeamsForSeason = (season) => {
-    return seasonTeams[season] || Object.values(seasonTeams).flat();
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedImage(file);
-
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-      // First, update the card data (without image)
-      const submitData = { ...formData };
-      delete submitData.image; // Remove any image field to avoid casting errors
-      console.log('Submitting card data:', submitData);
-      await onSave(card.id, submitData);
-
-      // Then, if there's a selected image, upload it separately
-      if (selectedImage) {
-        console.log('Uploading image:', selectedImage.name);
-        const imageFormData = new FormData();
-        imageFormData.append('image', selectedImage);
-
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/cards/${card.id}/image`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: imageFormData
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to upload image');
-        }
-
-        console.log('Image uploaded successfully');
-
-        // Force refresh the card list to show the new image
-        // Add a timestamp to break cache for the image
-        const timestamp = Date.now();
-        setCards(cards.map(c =>
-          c.id === card.id
-            ? { ...c, imageTimestamp: timestamp }
-            : c
-        ));
-      }
-    } catch (error) {
-      console.error('Error in form submission:', error);
-      alert(`Error: ${error.message}`);
-    }
-  };
-
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onCancel();
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      onClick={handleBackdropClick}
-    >
-      <div className="bg-white p-8 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-6">Edit Card: {card.name || 'Unnamed Card'}</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Card ID (Read-only):</label>
-                <input
-                  type="text"
-                  value={card.id}
-                  disabled
-                  className="w-full p-2 border border-gray-300 rounded bg-gray-100 text-gray-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Name:</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Card Type:</label>
-                <select
-                  value={formData.cardType}
-                  onChange={(e) => setFormData({ ...formData, cardType: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Select Type</option>
-                  <option value="Player">Player</option>
-                  <option value="Item">Item</option>
-                  <option value="Team">Team</option>
-                  <option value="Base">Base</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">HP:</label>
-                <input
-                  type="number"
-                  value={formData.hp}
-                  onChange={(e) => setFormData({ ...formData, hp: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Attack:</label>
-                <input
-                  type="text"
-                  value={formData.attack}
-                  onChange={(e) => setFormData({ ...formData, attack: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., 120, 80, etc."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Weapon:</label>
-                <select
-                  value={formData.weapon}
-                  onChange={(e) => setFormData({ ...formData, weapon: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Select Weapon</option>
-                  <option value="Bow">Bow</option>
-                  <option value="Axe">Axe</option>
-                  <option value="Sword">Sword</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Middle Column */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Effect:</label>
-                <textarea
-                  value={formData.effect}
-                  onChange={(e) => setFormData({ ...formData, effect: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[120px] resize-y"
-                  placeholder="Card effect description..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Season:</label>
-                <div className="flex gap-2 mb-2 flex-wrap">
-                  {Object.keys(seasonTeams).map((season) => (
-                    <button
-                      key={season}
-                      type="button"
-                      onClick={() => handleSeasonChange(season)}
-                      className={`px-3 py-2 border rounded text-sm font-medium transition-colors cursor-pointer ${selectedSeason === season
-                          ? 'bg-blue-500 text-white border-blue-500'
-                          : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                        }`}
-                    >
-                      {season.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Team:</label>
-                <select
-                  value={formData.team}
-                  onChange={(e) => setFormData({ ...formData, team: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">None</option>
-                  {getTeamsForSeason(selectedSeason).map(team => (
-                    <option key={team} value={team.toLowerCase().replaceAll(" ", "-")}>
-                      {team}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Right Column - Image Preview */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Card Image:</label>
-                <div className="border-2 border-gray-300 rounded-lg p-4 text-center">
-                  <div className="h-80 flex items-center justify-center bg-gray-50 rounded mb-4">
-                    <div className="text-center w-full">
-                      {imagePreview ? (
-                        <img
-                          src={imagePreview}
-                          alt="Selected preview"
-                          className="mx-auto max-h-72 w-full object-contain rounded"
-                        />
-                      ) : (
-                        <>
-                          <img
-                            src={`${import.meta.env.VITE_API_BASE_URL}/cards/image/${card.id}${card.imageTimestamp ? `?t=${card.imageTimestamp}` : ''}`}
-                            alt="Current card"
-                            className="mx-auto max-h-72 w-full object-contain rounded"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextElementSibling.style.display = 'block';
-                            }}
-                          />
-                          <div style={{ display: 'none' }} className="text-gray-400">
-                            <div className="text-6xl mb-4">🖼️</div>
-                            <div className="text-lg">No current image</div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="block w-full text-sm text-gray-500
-                                                file:mr-4 file:py-2 file:px-4
-                                                file:rounded file:border-0
-                                                file:text-sm file:font-semibold
-                                                file:bg-blue-50 file:text-blue-700
-                                                hover:file:bg-blue-100"
-                    />
-                  </div>
-
-                  {selectedImage && (
-                    <p className="text-xs text-green-600 mt-2">
-                      Ready to upload: {selectedImage.name}
-                    </p>
-                  )}
-                  {!selectedImage && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Choose an image to replace the current one
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-4 justify-end mt-8">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded font-medium transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition-colors cursor-pointer"
-            >
-              Save Changes
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// Modal for creating new cards
-const CardCreateModal = ({ onCreate, onCancel }) => {
-  const [formData, setFormData] = useState({
-    id: '',
-    name: '',
-    cardType: '',
-    hp: '',
-    attack: '',
-    description: '',
-    rank: ''
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.id.trim()) {
-      alert('Card ID is required');
-      return;
-    }
-    onCreate(formData);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-8 rounded-lg w-full max-w-lg max-h-[80vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-6">Create New Card</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Card ID*:</label>
-            <input
-              type="text"
-              value={formData.id}
-              onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Name:</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Card Type:</label>
-            <input
-              type="text"
-              value={formData.cardType}
-              onChange={(e) => setFormData({ ...formData, cardType: e.target.value })}
-              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">HP:</label>
-            <input
-              type="number"
-              value={formData.hp}
-              onChange={(e) => setFormData({ ...formData, hp: e.target.value })}
-              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Attack:</label>
-            <input
-              type="number"
-              value={formData.attack}
-              onChange={(e) => setFormData({ ...formData, attack: e.target.value })}
-              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Description:</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[100px] resize-y"
-            />
-          </div>
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">Rank:</label>
-            <input
-              type="text"
-              value={formData.rank}
-              onChange={(e) => setFormData({ ...formData, rank: e.target.value })}
-              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div className="flex gap-4 justify-end">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded font-medium transition-colors"
-            >
-              Create Card
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
+// (Edit/Create modal was extracted to src/components/AdminCardModal.jsx)
 
 export default AdminCardManager;
