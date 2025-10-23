@@ -1,6 +1,6 @@
 // src/pages/AdminCardManager.jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchAllPacks } from '../api';
+import { fetchAllPacks, fetchAllCardsAdmin, createCard, updateCard } from '../api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import AdminCardModal from '../components/AdminCardModal';
@@ -41,30 +41,21 @@ const AdminCardManager = () => {
     return mapping;
   }, [allPacks]);
 
-  const { user, token, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const fetchCards = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/cards`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch cards');
-      }
-
-      const data = await response.json();
-      setCards(data);
+  // use api helper which wraps authFetch and centralizes auth handling
+  const data = await fetchAllCardsAdmin();
+  setCards(data);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -80,21 +71,8 @@ const AdminCardManager = () => {
   const handleUpdateCard = async (cardId, updateData) => {
     try {
       console.log('handleUpdateCard received:', updateData);
-
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/cards/${cardId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(updateData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update card');
-      }
-
-      const { card } = await response.json();
+  // use api helper which returns parsed json
+  const { card } = await updateCard(cardId, updateData);
 
       // Create the updated card with displayName
       const updatedCard = {
@@ -111,24 +89,11 @@ const AdminCardManager = () => {
 
   const handleCreateCard = async (cardData) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/cards`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(cardData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create card');
-      }
-
-      const { card } = await response.json();
-      setCards([...cards, card]);
+  // delegate to API helper (handles auth)
+  const { card } = await createCard(cardData);
+  setCards([...cards, card]);
   setShowCreateForm(false);
-  // Return created card for callers that may upload images immediately
+  // Return created card so modal can upload image to the new resource
   return { card };
     } catch (err) {
       alert(`Error creating card: ${err.message}`);
@@ -546,18 +511,8 @@ const CardItem = ({ card, onEdit, onCardUpdate, onImageStatus }) => {
   // Handle rank update
   const handleRankChange = async (newRank) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/cards/${card.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ rank: newRank.toString() })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update rank');
-      }
+      // Use API helper which wraps auth and parsing
+      await updateCard(card.id, { rank: newRank.toString() });
 
       // Update the card in the parent component's state
       if (onCardUpdate) {
