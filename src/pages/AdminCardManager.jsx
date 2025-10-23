@@ -150,10 +150,13 @@ const AdminCardManager = () => {
       (card.displayName || card.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (card.id || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Rank filter (multiple selections)
-    const matchesRank = filters.ranks.length === 0 || filters.ranks.some(r => {
-      return card.rank?.toString() === r || card.rank === r;
-    });
+    // Rank filter (only applies to Player cards)
+    let matchesRank = true;
+    if (card.cardType === 'Player') {
+      matchesRank = filters.ranks.length === 0 || filters.ranks.some(r => {
+        return card.rank?.toString() === r || card.rank === r;
+      });
+    }
 
     // Card type filter (multiple selections)
     const matchesCardType = filters.cardTypes.length === 0 || filters.cardTypes.includes(card.cardType);
@@ -319,7 +322,7 @@ const AdminCardManager = () => {
                     }}
                     className="mr-2 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded cursor-pointer"
                   />
-                  <span className="text-sm cursor-pointer">Rank {rank} ({cards.filter(c => c.rank?.toString() === rank || c.rank === rank).length})</span>
+                  <span className="text-sm cursor-pointer">Rank {rank} ({cards.filter(c => c.cardType === 'Player' && (c.rank?.toString() === rank || c.rank === rank)).length})</span>
                 </label>
               ))}
             </div>
