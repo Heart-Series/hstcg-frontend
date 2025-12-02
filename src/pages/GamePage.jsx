@@ -26,6 +26,7 @@ const GamePageContent = () => {
         useTexture.preload('/images/tails.png');
     }, []);
 
+    const gameContext = useGame() || {};
     const {
         gameState, gameOverData, myPlayerState, opponentState, isSpectator,
         actions, promptChoice, isMyTurn, canPerformAction,
@@ -36,7 +37,7 @@ const GamePageContent = () => {
         isHandOpen, setIsHandOpen,
         handleDragStart, handleDragEnd,
         targeting, setTargeting, openInspector
-    } = useGame();
+    } = gameContext;
     const navigate = useNavigate();
 
     const handleAnimationComplete = () => {

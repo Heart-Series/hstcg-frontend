@@ -23,10 +23,14 @@ export function canDrop({ draggedCard, zone, ownerPlayerState, playerPrefix, gam
     const validTargetsAllows = (hostInstanceId, declarative) => {
         const vt = draggedCard.validTargets;
         if (!Array.isArray(vt)) return false;
-        // If an instanceId list is present, prefer it
+        // If an instanceId list is present and host exists, prefer it
         if (hostInstanceId && vt.includes(hostInstanceId)) return true;
-        // Fallback: check the declarative string
-        return vt.includes(declarative);
+        // If host exists, allow the plain declarative (e.g., 'opponent_active')
+        if (hostInstanceId && vt.includes(declarative)) return true;
+        // Accept explicit slot declarative tokens (e.g., 'opponent_active_slot') even if the host is empty
+        const slotDeclarative = `${declarative}_slot`;
+        if (vt.includes(slotDeclarative)) return true;
+        return false;
     }
 
     // BENCH SLOT
@@ -50,8 +54,9 @@ export function canDrop({ draggedCard, zone, ownerPlayerState, playerPrefix, gam
     if (zone === 'active') {
         const activeCard = ownerPlayerState?.activeCard || null;
         if (draggedCard.cardType === 'Item') {
-            if (!activeCard) return false;
-            const hostId = activeCard.instanceId;
+            // Allow targeting the active slot even if empty when the item's validTargets
+            // includes the corresponding declarative (e.g., 'opponent_active_slot').
+            const hostId = activeCard?.instanceId || null;
             return validTargetsAllows(hostId, targetString('active'));
         }
         if (draggedCard.cardType === 'Player') {

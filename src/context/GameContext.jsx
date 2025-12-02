@@ -108,8 +108,10 @@ export const GameProvider = ({ children, initialGameState, isSpectator }) => {
         }
       }
       if (parts[1] === 'active') {
-        if (!ownerPlayerState || !ownerPlayerState.activeCard) {
-          return; // active slot empty - reject
+        // Allow empty active slot when the item explicitly targets the slot itself (e.g., 'opponent_active_slot').
+        const allowsSlot = Array.isArray(draggedCard.validTargets) && draggedCard.validTargets.includes(`${parts[0]}_active_slot`);
+        if (!ownerPlayerState || (!ownerPlayerState.activeCard && !allowsSlot)) {
+          return; // active slot empty and item does not allow slot targeting - reject
         }
       }
 

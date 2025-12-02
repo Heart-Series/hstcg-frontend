@@ -19,10 +19,10 @@ const DeckLibrary = () => {
           fetchUserDecks(),
           fetchRentalDecks()
         ]);
-        
+
         console.log('User decks:', userDecksData);
         console.log('Rental decks:', rentalDecksData);
-        
+
         setDecks(userDecksData);
         setRentalDecks(rentalDecksData);
         setLoading(false);
@@ -33,7 +33,7 @@ const DeckLibrary = () => {
     };
 
     fetchData();
-  }, []);  const handleCreateDeck = async () => {
+  }, []); const handleCreateDeck = async () => {
     const newDeck = await createNewDeck();
     if (newDeck?._id) {
       // Immediately navigate to the deck builder for the new deck
@@ -148,10 +148,10 @@ const DeckLibrary = () => {
             gap: '0.75rem'
           }}>
             {decks.map(deck => (
-              <DeckCard 
+              <DeckCard
                 key={deck._id}
-                deck={deck} 
-                isRental={false} 
+                deck={deck}
+                isRental={false}
                 onSelect={null}
                 onDelete={handleDeleteDeck}
                 showPreview={false}
@@ -180,10 +180,10 @@ const DeckLibrary = () => {
             gap: '0.75rem'
           }}>
             {rentalDecks.map(deck => (
-              <DeckCard 
+              <DeckCard
                 key={deck._id}
-                deck={deck} 
-                isRental={true} 
+                deck={deck}
+                isRental={true}
                 onSelect={null}
                 onDelete={null}
                 showPreview={false}
