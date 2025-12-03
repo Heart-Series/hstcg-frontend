@@ -13,13 +13,12 @@ const PlayerArea = ({
   playerState,
   isOpponent = false,
   isSpectator = false,
-  actions,
   gameState,
   activeDragData,
   promptChoice,
 }) => {
   const { selectedCardId, onCardClick, onActionClick, targeting, openInspector, openCardPileViewer } = useGame();
-  const { activeCard, bench, supportCard, attachedItems, deck, discard } = playerState;
+  const { activeCard, bench, supportCard, deck, discard } = playerState;
   const playerPrefix = isOpponent ? 'opponent' : 'my';
 
   const validTargets = promptChoice?.validTargets || targeting.action?.validTargets || [];
@@ -130,7 +129,7 @@ const PlayerArea = ({
   const canDropSlotOnSupport = isSupportSlotOver && isValidDropOnSupport();
   const isInvalidDropOnSupport = isSupportSlotOver && !isValidDropOnSupport();
 
-  const mainRowOrder = isOpponent ? 'flex-row' : 'flex-row-reverse';
+  // const mainRowOrder = isOpponent ? 'flex-row' : 'flex-row-reverse';
 
   const isActiveCardTargetable = isInstanceIdTargetable(activeCard?.instanceId) || (Array.isArray(validTargets) && validTargets.includes(`${playerPrefix}_active`));
 
