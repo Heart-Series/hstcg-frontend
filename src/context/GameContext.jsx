@@ -35,7 +35,7 @@ export const GameProvider = ({ children, initialGameState, isSpectator }) => {
   const showAnimation = useCallback((animationData) => setAnimation(animationData), []);
   const hideAnimation = useCallback(() => setAnimation(null), []);
   const openCardPileViewer = useCallback((title, cards) => setViewingCardPile({ title, cards }), []);
-  
+
   const openInspector = useCallback((cardData) => setInspectorCardData(cardData), []);
   const cancelAllActions = useCallback(() => {
     setSelectedCardId(null);
@@ -83,7 +83,7 @@ export const GameProvider = ({ children, initialGameState, isSpectator }) => {
       if (targetCard) openInspector(targetCard);
       return;
     }
-  if (draggedCard?.cardType === 'Item') {
+    if (draggedCard?.cardType === 'Item') {
       const parts = dropZoneId.split('-');
       const target = {
         playerId: parts[0] === 'my' ? myPlayerState.socketId : opponentState.socketId,
@@ -115,11 +115,11 @@ export const GameProvider = ({ children, initialGameState, isSpectator }) => {
         }
       }
 
-  console.debug('Sending playItemCard to server', { instanceId, target });
-  // Close any open action menus / targeting state before emitting the action
-  cancelAllActions();
-  closeInspector();
-  actions.playItemCard(instanceId, target);
+      console.debug('Sending playItemCard to server', { instanceId, target });
+      // Close any open action menus / targeting state before emitting the action
+      cancelAllActions();
+      closeInspector();
+      actions.playItemCard(instanceId, target);
       return;
     }
     if (gameState.phase === 'setup' && dropZoneId === 'my-active') {
@@ -140,34 +140,35 @@ export const GameProvider = ({ children, initialGameState, isSpectator }) => {
       cancelAllActions();
       return;
     }
-    if (targeting.isTargeting && isTargetable) {
-      const action = targeting.action;
+    if (targeting.isTargeting) {
+      // If it IS a valid target, resolve the action!
+      if (isTargetable) {
+        const action = targeting.action;
 
-      // --- REVISED LOGIC ---
-      // If this is a resolution-phase action (it will include sourceCardId),
-      // always handle it first so resolution basic attacks aren't treated as normal attacks.
-      if (action.sourceCardId) {
-        actions.performResolutionAction(action, clickedInstanceId);
-      } else if (action.isMultiPhase) {
-        // It's a multi-phase attack that was waiting for a target. Start phase 1.
-        actions.resolveAbilityStep(selectedCardId, clickedInstanceId, 1, null);
-      } else if (action.type === 'retreat') {
-        const benchIndex = myPlayerState.bench.findIndex(c => c && c.instanceId === clickedInstanceId);
-        if (benchIndex > -1) actions.retreatActiveCard(benchIndex);
-      } else if (action.type === 'basic_attack' || action.type === 'special_attack') {
-        // It's a regular, single-phase attack.
-        actions.performAttack(action.type, clickedInstanceId);
-      }
-      // Handle prompt choices like before
-      else if (promptChoice) {
-        if (promptChoice.choosingState?.sourceInstanceId) {
-          actions.resolveAbilityStep(promptChoice.choosingState.sourceInstanceId, clickedInstanceId, promptChoice.phase, promptChoice.choosingState);
-        } else {
-          actions.playItemCard(null, clickedInstanceId, promptChoice.phase, promptChoice.choosingState);
+        if (action.sourceCardId) {
+          actions.performResolutionAction(action, clickedInstanceId);
+        } else if (action.isMultiPhase) {
+          actions.resolveAbilityStep(selectedCardId, clickedInstanceId, 1, null);
+        } else if (action.type === 'retreat') {
+          const benchIndex = myPlayerState.bench.findIndex(c => c && c.instanceId === clickedInstanceId);
+          if (benchIndex > -1) actions.retreatActiveCard(benchIndex);
+        } else if (action.type === 'basic_attack' || action.type === 'special_attack') {
+          actions.performAttack(action.type, clickedInstanceId);
+        } else if (promptChoice) {
+          if (promptChoice.choosingState?.sourceInstanceId) {
+            actions.resolveAbilityStep(promptChoice.choosingState.sourceInstanceId, clickedInstanceId, promptChoice.phase, promptChoice.choosingState);
+          } else {
+            actions.playItemCard(null, clickedInstanceId, promptChoice.phase, promptChoice.choosingState);
+          }
         }
+
+        cancelAllActions();
+        return;
       }
 
-      cancelAllActions();
+      // If it is NOT a valid target, DO NOT select the card!
+      // Simply warn the player and remain in targeting mode.
+      showToast('Not a valid target.', { style: 'error' });
       return;
     }
     setSelectedCardId(clickedInstanceId);
@@ -195,19 +196,19 @@ export const GameProvider = ({ children, initialGameState, isSpectator }) => {
   }, [actions, resolutionState, opponentState, cancelAllActions, openInspector]);
 
   const promptMessage = useMemo(() => {
-   // 1. If we are actively targeting something, that's the most important message.
+    // 1. If we are actively targeting something, that's the most important message.
     if (targeting.isTargeting && targeting.action?.title) {
-        return targeting.action.title;
+      return targeting.action.title;
     }
-    
+
     // 2. If the server sent a specific prompt (like for Satonix), show that.
     if (promptChoice?.title) {
-        return promptChoice.title;
+      return promptChoice.title;
     }
 
     // 3. As a fallback, if we're in the resolution phase but not targeting yet, show the general message.
     if (resolutionState.isActive) {
-        return "End-of-Turn Actions";
+      return "End-of-Turn Actions";
     }
 
     return null; // Otherwise, show nothing.
